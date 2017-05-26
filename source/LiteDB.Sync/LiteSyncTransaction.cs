@@ -33,8 +33,8 @@
 
         public void Commit()
         {
+            this.ownerDatabase.GetCollection<DirtyEntity>().UnderlyingCollection.Insert(this.dirtyEntities);
             this.originalTransaction.Commit();
-            // TODO: Reset the transaction obj
         }
 
         public void Rollback()
