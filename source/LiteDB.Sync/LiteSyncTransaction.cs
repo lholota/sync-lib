@@ -1,14 +1,34 @@
 ﻿namespace LiteDB.Sync
 {
     using System;
+    using System.Collections.Generic;
+    using Entities;
 
-    public class LiteSyncTransaction : IDisposable
+    public class LiteSyncTransaction : ILiteTransaction
     {
-        private readonly LiteTransaction originalTransaction;
+        private readonly Guid transactionId;
+        private readonly ILiteTransaction originalTransaction;
+        private readonly LiteSyncDatabase ownerDatabase;
+        private readonly IList<DirtyEntity> dirtyEntities;
 
-        internal LiteSyncTransaction(LiteTransaction originalTransaction)
+        internal LiteSyncTransaction(ILiteTransaction originalTransaction, LiteSyncDatabase ownerDatabase)
         {
             this.originalTransaction = originalTransaction;
+            this.ownerDatabase = ownerDatabase;
+            this.transactionId = Guid.NewGuid();
+            this.dirtyEntities = new List<DirtyEntity>();
+        }
+
+        internal void AddDirtyEntity(string collectionName, BsonValue id)
+        {
+            var dirty = new DirtyEntity
+            {
+                TransactionId = this.transactionId,
+                CollectionName = collectionName,
+                EntityId = id
+            };
+
+            dirtyEntities.Add(dirty);
         }
 
         public void Commit()
@@ -25,6 +45,7 @@
         public void Dispose()
         {
             originalTransaction.Dispose();
+            ownerDatabase.PopTransaction();
         }
     }
 }

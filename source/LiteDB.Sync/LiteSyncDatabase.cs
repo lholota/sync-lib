@@ -6,8 +6,12 @@
 
     public class LiteSyncDatabase : ILiteDatabase
     {
+        private long transactionCount;
+
+        private readonly object syncTransactionLock = new object();
         private readonly LiteDatabase db;
         private readonly ILiteDbSyncController syncController;
+        private LiteSyncTransaction syncTransaction;
 
         public LiteSyncDatabase(ILiteDbSyncController syncController, string connectionString, BsonMapper mapper = null)
         {
@@ -43,59 +47,95 @@
 
         public LiteStorage FileStorage => this.db.FileStorage;
 
-        public ILiteTransaction BeginTrans() // TODO: Interface?
+        internal LiteSyncTransaction SyncTransaction
         {
-            return this.db.BeginTrans();
+            get
+            {
+                lock (this.syncTransactionLock)
+                {
+                    return syncTransaction;
+                }
+            }
         }
 
-        public ILiteCollection<T> GetCollection<T>(string name) // TODO: Interface?
+        public ILiteTransaction BeginTrans()
         {
-            throw new NotImplementedException();
+            lock (this.syncTransactionLock)
+            {
+                if (this.transactionCount == 0)
+                {
+                    this.syncTransaction = new LiteSyncTransaction(this.db.BeginTrans(), this);
+
+                    return this.syncTransaction;
+                }
+
+                this.transactionCount++;
+
+                return this.db.BeginTrans();
+            }
+        }
+
+        public ILiteCollection<T> GetCollection<T>(string name)
+        {
+            return new LiteSyncCollection<T>(this.db.GetCollection<T>(name), this);
         }
 
         public ILiteCollection<T> GetCollection<T>()
         {
-            throw new NotImplementedException();
+            return new LiteSyncCollection<T>(this.db.GetCollection<T>(), this);
         }
 
         public ILiteCollection<BsonDocument> GetCollection(string name)
         {
-            throw new NotImplementedException();
+            return new LiteSyncCollection<BsonDocument>(this.db.GetCollection(name), this);
         }
 
         public IEnumerable<string> GetCollectionNames()
         {
-            throw new NotImplementedException();
+            return this.db.GetCollectionNames();
         }
 
         public bool CollectionExists(string name)
         {
-            throw new NotImplementedException();
+            return this.db.CollectionExists(name);
         }
 
         public bool DropCollection(string name)
         {
-            throw new NotImplementedException();
+            return this.db.DropCollection(name);
         }
 
         public bool RenameCollection(string oldName, string newName)
         {
-            throw new NotImplementedException();
+            return this.db.RenameCollection(oldName, newName);
         }
 
         public long Shrink()
         {
-            throw new NotImplementedException();
+            return this.db.Shrink();
         }
 
         public long Shrink(string password)
         {
-            throw new NotImplementedException();
+            return this.db.Shrink(password);
         }
 
         public void Dispose()
         {
             this.db.Dispose();
+        }
+
+        internal void PopTransaction()
+        {
+            lock (syncTransactionLock)
+            {
+                this.transactionCount--;
+
+                if (this.transactionCount == 0)
+                {
+                    // TODO: clear the field
+                }
+            }
         }
     }
 }

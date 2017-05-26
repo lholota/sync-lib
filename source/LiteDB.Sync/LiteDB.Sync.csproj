@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LiteDB\LiteDB\LiteDB.NetStandard.csproj" />
+    <ProjectReference Include="..\LiteDB\LiteDB\LiteDB.dotnet.csproj" />
   </ItemGroup>
 
 </Project>
