@@ -1,0 +1,4 @@
+﻿- Simultanious sync and write
+- Simultanious sync and read (should not block)
+- Conflict resolution with subsequent push
+- Cloud updated in the middle of a sync

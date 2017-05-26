@@ -35,7 +35,7 @@
              * Check local changes
              * Pull remote changes
              * Resolve conflicts if they happen
-             * Push local changes to cloud
+             * Push local changes + resolutions to the cloud
              */
 
             throw new System.NotImplementedException();

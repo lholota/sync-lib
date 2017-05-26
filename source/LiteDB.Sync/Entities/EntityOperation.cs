@@ -1,6 +1,6 @@
 namespace LiteDB.Sync.Entities
 {
-    internal class EntityOperation
+    public class EntityOperation
     {
         public EntityOperationType OperationType { get; set; }
 

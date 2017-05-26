@@ -2,7 +2,7 @@
 {
     using System.Collections.Generic;
 
-    internal class Transaction
+    public class Transaction
     {
         // TBA: Metadata - local date/time, device id etc?
 

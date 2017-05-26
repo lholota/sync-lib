@@ -1,6 +1,6 @@
 namespace LiteDB.Sync.Entities
 {
-    internal enum EntityOperationType
+    public enum EntityOperationType
     {
         Delete,
         Insert,
