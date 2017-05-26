@@ -1,0 +1,3 @@
+[submodule "source/LiteDB"]
+	path = source/LiteDB
+	url = https://github.com/litedb-sync/LiteDB
