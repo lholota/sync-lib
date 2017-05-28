@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace LiteDB.Sync
 {
-    public class LiteSyncCollection<T> : ILiteCollection<T>
+    [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
+    public class LiteSyncCollection<T> : ILiteCollection<T> 
     {
         private readonly LiteSyncDatabase database;
 
@@ -35,17 +39,76 @@ namespace LiteDB.Sync
 
         public int Delete(Query query)
         {
-            return this.UnderlyingCollection.Delete(query);
+            if (!typeof(ILiteSyncEntity).IsAssignableFrom(typeof(T)))
+            {
+                return this.UnderlyingCollection.Delete(query);
+            }
+
+            int result;
+
+            using (var tx = this.database.BeginTrans())
+            {
+                var itemsToDelete = this.Find(query);
+                var ids = itemsToDelete
+                    .Cast<ILiteSyncEntity>()
+                    .Select(x => x.BsonId)
+                    .ToArray();
+
+                this.database.InsertDeletedEntityIds(this.Name, ids);
+
+                result = this.UnderlyingCollection.Delete(query);
+
+                tx.Commit();
+            }
+
+            return result;
         }
 
         public int Delete(Expression<Func<T, bool>> predicate)
         {
-            return this.UnderlyingCollection.Delete(predicate);
+            if (!typeof(ILiteSyncEntity).IsAssignableFrom(typeof(T)))
+            {
+                return this.UnderlyingCollection.Delete(predicate);
+            }
+
+            int result;
+
+            using (var tx = this.database.BeginTrans())
+            {
+                var itemsToDelete = this.Find(predicate);
+                var ids = itemsToDelete
+                    .Cast<ILiteSyncEntity>()
+                    .Select(x => x.BsonId)
+                    .ToArray();
+
+                this.database.InsertDeletedEntityIds(this.Name, ids);
+
+                result = this.UnderlyingCollection.Delete(predicate);
+
+                tx.Commit();
+            }
+
+            return result;
         }
 
         public bool Delete(BsonValue id)
         {
-            return this.UnderlyingCollection.Delete(id);
+            if (!typeof(ILiteSyncEntity).IsAssignableFrom(typeof(T)))
+            {
+                return this.UnderlyingCollection.Delete(id);
+            }
+
+            bool result;
+
+            using (var tx = this.database.BeginTrans())
+            {
+                this.database.InsertDeletedEntityId(this.Name, id);
+                result = this.UnderlyingCollection.Delete(id);
+
+                tx.Commit();
+            }
+
+            return result;
         }
 
         public bool DropIndex(string field)
@@ -120,22 +183,30 @@ namespace LiteDB.Sync
 
         public BsonValue Insert(T document)
         {
+            this.MarkDirty(document);
+
             return this.UnderlyingCollection.Insert(document);
         }
 
         public void Insert(BsonValue id, T document)
         {
+            this.MarkDirty(document);
+
             this.UnderlyingCollection.Insert(id, document);
         }
 
         public int Insert(IEnumerable<T> docs)
         {
+            this.MarkDirty(docs);
+
             return this.UnderlyingCollection.Insert(docs);
         }
 
         public int InsertBulk(IEnumerable<T> docs, int batchSize = 5000)
         {
-            throw new NotSupportedException("This doesn't support transactions...");
+            this.MarkDirty(docs);
+
+            return this.UnderlyingCollection.InsertBulk(docs, batchSize);
         }
 
         public long LongCount()
@@ -185,126 +256,67 @@ namespace LiteDB.Sync
 
         public bool Update(T entity)
         {
-            bool result;
+            MarkDirty(entity);
 
-            using (var trans = this.database.BeginTrans())
-            {
-                result = this.UnderlyingCollection.Update(entity);
-
-                var document = this.database.Mapper.ToDocument(entity);
-
-                if (result)
-                {
-                    this.database.SyncTransaction.AddDirtyEntity(this.Name, document["_id"]);
-                }
-
-                trans.Commit();
-            }
-
-            return result;
+            return this.UnderlyingCollection.Update(entity);
         }
 
         public bool Update(BsonValue id, T document)
         {
-            bool result;
+            this.MarkDirty(document);
 
-            using (var trans = this.database.BeginTrans())
-            {
-                result = this.UnderlyingCollection.Update(id, document);
-
-                if (result)
-                {
-                    this.database.SyncTransaction.AddDirtyEntity(this.Name, id);
-                }
-
-                trans.Commit();
-            }
-
-            return result;
+            return this.UnderlyingCollection.Update(id, document);
         }
 
         public int Update(IEnumerable<T> entities)
         {
-            var result = 0;
+            this.MarkDirty(entities);
 
-            using (var trans = this.database.BeginTrans())
-            {
-                foreach (var entity in entities)
-                {
-                    var document = this.database.Mapper.ToDocument(entity);
-
-                    if (this.UnderlyingCollection.Update(entity))
-                    {
-                        this.database.SyncTransaction.AddDirtyEntity(this.Name, document["_id"]);
-                    }
-                }
-
-                trans.Commit();
-            }
-
-            return result;
+            return this.UnderlyingCollection.Update(entities);
         }
 
         public bool Upsert(T entity)
         {
-            bool result;
+            this.MarkDirty(entity);
 
-            using (var trans = this.database.BeginTrans())
-            {
-                result = this.UnderlyingCollection.Upsert(entity);
-
-                var document = this.database.Mapper.ToDocument(entity);
-
-                if (result)
-                {
-                    this.database.SyncTransaction.AddDirtyEntity(this.Name, document["_id"]);
-                }
-
-                trans.Commit();
-            }
-
-            return result;
+            return this.UnderlyingCollection.Upsert(entity);
         }
 
         public bool Upsert(BsonValue id, T document)
         {
-            bool result;
+            this.MarkDirty(document);
 
-            using (var trans = this.database.BeginTrans())
-            {
-                result = this.UnderlyingCollection.Upsert(document);
-
-                if (result)
-                {
-                    this.database.SyncTransaction.AddDirtyEntity(this.Name, id);
-                }
-
-                trans.Commit();
-            }
-
-            return result;
+            return this.UnderlyingCollection.Upsert(id, document);
         }
 
         public int Upsert(IEnumerable<T> entities)
         {
-            var result = 0;
+            this.MarkDirty(entities);
 
-            using (var trans = this.database.BeginTrans())
+            return this.UnderlyingCollection.Upsert(entities);
+        }
+
+        private void MarkDirty(IEnumerable<T> entities)
+        {
+            if (entities == null)
             {
-                foreach (var entity in entities)
-                {
-                    var document = this.database.Mapper.ToDocument(entity);
-
-                    if (this.UnderlyingCollection.Upsert(entity))
-                    {
-                        this.database.SyncTransaction.AddDirtyEntity(this.Name, document["_id"]);
-                    }
-                }
-
-                trans.Commit();
+                return;
             }
 
-            return result;
+            foreach (var entity in entities)
+            {
+                this.MarkDirty(entity);
+            }            
+        }
+
+        private void MarkDirty(T entity)
+        {
+            var syncedEntity = entity as ILiteSyncEntity;
+
+            if (syncedEntity != null)
+            {
+                syncedEntity.RequiresSync = true;
+            }
         }
     }
 }

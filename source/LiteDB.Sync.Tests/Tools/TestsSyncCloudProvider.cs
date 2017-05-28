@@ -3,9 +3,9 @@
     using System;
     using System.Threading.Tasks;
 
-    public class TestsSyncProvider : ILiteSyncProvider
+    public class TestsSyncCloudProvider : ILiteSyncCloudProvider
     {
-        public TestsSyncProvider(DeviceContext deviceContext)
+        public TestsSyncCloudProvider(DeviceContext deviceContext)
         {
             throw new NotImplementedException();
         }

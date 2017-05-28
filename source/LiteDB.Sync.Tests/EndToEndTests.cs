@@ -26,8 +26,8 @@
                 var dbOne = this.DeviceOne.CreateLiteDatabase();
                 dbOne.GetCollection<TestEntity>().Insert(savedEntity);
 
-                await this.DeviceOne.Controller.SyncNow();
-                await this.DeviceTwo.Controller.SyncNow();
+                await this.DeviceOne.Service.SyncNow();
+                await this.DeviceTwo.Service.SyncNow();
 
                 var dbTwo = this.DeviceTwo.CreateLiteDatabase();
                 var actual = dbTwo.GetCollection<TestEntity>().FindOne(x => true);

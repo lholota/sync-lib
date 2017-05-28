@@ -9,19 +9,19 @@
     {
         private readonly ILiteDatabase db;
 
-        public LiteSyncRepository(ILiteDbSyncController syncController, string connectionString, BsonMapper mapper = null)
+        public LiteSyncRepository(string connectionString, BsonMapper mapper = null)
         {
-            this.db = new LiteSyncDatabase(syncController, connectionString, mapper);
+            this.db = new LiteSyncDatabase(connectionString, mapper);
         }
 
-        public LiteSyncRepository(ILiteDbSyncController syncController, ConnectionString connectionString, BsonMapper mapper = null)
+        public LiteSyncRepository(ConnectionString connectionString, BsonMapper mapper = null)
         {
-            this.db = new LiteSyncDatabase(syncController, connectionString, mapper);
+            this.db = new LiteSyncDatabase(connectionString, mapper);
         }
 
-        public LiteSyncRepository(ILiteDbSyncController syncController, Stream stream, BsonMapper mapper = null, string password = null)
+        public LiteSyncRepository(Stream stream, BsonMapper mapper = null, string password = null)
         {
-            this.db = new LiteSyncDatabase(syncController, stream, mapper, password);
+            this.db = new LiteSyncDatabase(stream, mapper, password);
         }
 
         #region Shortchut from Database/Engine

@@ -5,7 +5,7 @@
     using System.Threading.Tasks;
     using Entities;
 
-    public interface ILiteSyncProvider
+    public interface ILiteSyncCloudProvider
     {
         Task<IList<Transaction>> Pull(Guid latestTransactionId);
 

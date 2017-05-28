@@ -1,21 +1,12 @@
-﻿namespace LiteDB.Sync
+﻿using System;
+using System.Threading.Tasks;
+using LiteDB.Sync.Entities;
+
+namespace LiteDB.Sync
 {
-    using System.Threading.Tasks;
-    using Entities;
-
-    public class LiteDbSyncController : ILiteDbSyncController
+    public abstract class LiteSyncService : ILiteSyncService
     {
-        private const string SyncCollectionName = "LiteSync";
         private const string LocalHeadId = "LocalHead";
-
-        private readonly ILiteSyncProvider provider;
-        private readonly ILiteDatabase db;
-
-        public LiteDbSyncController(ILiteSyncProvider provider, ILiteDatabase db)
-        {
-            this.provider = provider;
-            this.db = db;
-        }
 
         public void StartSyncWorker()
         {
@@ -41,9 +32,14 @@
             throw new System.NotImplementedException();
         }
 
+        protected abstract ILiteSyncCloudProvider GetProvider();
+
+        protected abstract object GetConflictResolver();
+
         private StoreHead GetLocalHead()
         {
-            return db.GetCollection<StoreHead>(SyncCollectionName).FindById(LocalHeadId);
+            throw new NotImplementedException();
+            //return db.GetCollection<StoreHead>(SyncCollectionName).FindById(LocalHeadId);
         }
     }
 }

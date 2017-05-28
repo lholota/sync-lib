@@ -2,7 +2,7 @@
 {
     using System.Threading.Tasks;
 
-    public interface ILiteDbSyncController
+    public interface ILiteSyncService
     {
         void StartSyncWorker();
 

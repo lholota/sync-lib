@@ -1,4 +1,7 @@
-﻿namespace LiteDB.Sync
+﻿using System.Linq;
+using LiteDB.Sync.Entities;
+
+namespace LiteDB.Sync
 {
     using System;
     using System.Collections.Generic;
@@ -6,37 +9,30 @@
 
     public class LiteSyncDatabase : ILiteDatabase
     {
-        private long transactionCount;
+        private const string DeletedEntitiesCollection = "SyncDeleted";
 
-        private readonly object syncTransactionLock = new object();
         private readonly LiteDatabase db;
-        private readonly ILiteDbSyncController syncController;
-        private LiteSyncTransaction syncTransaction;
 
-        public LiteSyncDatabase(ILiteDbSyncController syncController, string connectionString, BsonMapper mapper = null)
+        public LiteSyncDatabase(string connectionString, BsonMapper mapper = null)
         {
             this.db = new LiteDatabase(connectionString, mapper);
-            this.syncController = syncController;
         }
 
-        public LiteSyncDatabase(ILiteDbSyncController syncController, ConnectionString connectionString, BsonMapper mapper = null)
+        public LiteSyncDatabase(ConnectionString connectionString, BsonMapper mapper = null)
         {
             this.db = new LiteDatabase(connectionString, mapper);
-            this.syncController = syncController;
         }
 
-        public LiteSyncDatabase(ILiteDbSyncController syncController, Stream stream, BsonMapper mapper = null, string password = null)
+        public LiteSyncDatabase(Stream stream, BsonMapper mapper = null, string password = null)
         {
             this.db = new LiteDatabase(stream, mapper, password);
-            this.syncController = syncController;
         }
 
-        public LiteSyncDatabase(ILiteDbSyncController syncController, IDiskService diskService, 
+        public LiteSyncDatabase(IDiskService diskService, 
                             BsonMapper mapper = null, string password = null,
                             TimeSpan? timeout = null, int cacheSize = 5000, Logger log = null)
         {
             this.db = new LiteDatabase(diskService, mapper, password, timeout, cacheSize, log);
-            this.syncController = syncController;
         }
 
         public Logger Log => this.db.Log;
@@ -47,32 +43,31 @@
 
         public LiteStorage FileStorage => this.db.FileStorage;
 
-        internal LiteSyncTransaction SyncTransaction
+        public void InsertDeletedEntityId(string collectionName, BsonValue id)
         {
-            get
+            var pointer = new DeletedEntity
             {
-                lock (this.syncTransactionLock)
-                {
-                    return syncTransaction;
-                }
-            }
+                CollectionName = collectionName,
+                EntityId = id
+            };
+
+            this.db.GetCollection<DeletedEntity>(DeletedEntitiesCollection).Insert(pointer);
+        }
+
+        public void InsertDeletedEntityIds(string collectionName, IEnumerable<BsonValue> ids)
+        {
+            var pointers = ids.Select(x => new DeletedEntity
+            {
+                CollectionName = collectionName,
+                EntityId = x
+            });
+
+            this.db.GetCollection<DeletedEntity>(DeletedEntitiesCollection).Insert(pointers);
         }
 
         public ILiteTransaction BeginTrans()
         {
-            lock (this.syncTransactionLock)
-            {
-                if (this.transactionCount == 0)
-                {
-                    this.syncTransaction = new LiteSyncTransaction(this.db.BeginTrans(), this);
-
-                    return this.syncTransaction;
-                }
-
-                this.transactionCount++;
-
-                return this.db.BeginTrans();
-            }
+            return this.db.BeginTrans();
         }
 
         public ILiteCollection<T> GetCollection<T>(string name)
@@ -123,19 +118,6 @@
         public void Dispose()
         {
             this.db.Dispose();
-        }
-
-        internal void PopTransaction()
-        {
-            lock (syncTransactionLock)
-            {
-                this.transactionCount--;
-
-                if (this.transactionCount == 0)
-                {
-                    // TODO: clear the field
-                }
-            }
-        }
+        }        
     }
 }
