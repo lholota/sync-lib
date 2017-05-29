@@ -2,7 +2,7 @@
 {
     using System;
 
-    public class StoreHead
+    public class Head
     {
         public Guid TransactionId { get; set; }
     }

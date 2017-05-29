@@ -1,8 +1,10 @@
-﻿namespace LiteDB.Sync.Tests.Tools
-{
-    using System;
-    using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using LiteDB.Sync.Entities;
 
+namespace LiteDB.Sync.Tests.Tools
+{
     public class TestsSyncCloudProvider : ILiteSyncCloudProvider
     {
         public TestsSyncCloudProvider(DeviceContext deviceContext)
@@ -10,12 +12,12 @@
             throw new NotImplementedException();
         }
 
-        public Task<object> Pull()
+        public Task<IList<Patch>> Pull(Guid latestTransactionId)
         {
             throw new NotImplementedException();
         }
 
-        public Task Push(object args)
+        public Task Push(Patch patch)
         {
             throw new NotImplementedException();
         }

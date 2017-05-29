@@ -7,8 +7,8 @@
 
     public interface ILiteSyncCloudProvider
     {
-        Task<IList<Transaction>> Pull(Guid latestTransactionId);
+        Task<IList<Patch>> Pull(Guid localHeadId);
 
-        Task Push(object args);
+        Task Push(Patch args);
     }
 }

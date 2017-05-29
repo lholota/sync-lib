@@ -1,5 +1,7 @@
 ﻿namespace LiteDB.Sync.Tests
 {
+    using System;
+    using System.IO;
     using System.Threading.Tasks;
     using NUnit.Framework;
     using Tools;
@@ -13,8 +15,8 @@
         [SetUp]
         public void Setup()
         {
-            this.DeviceOne = new DeviceContext();
-            this.DeviceTwo = new DeviceContext();
+            //this.DeviceOne = new DeviceContext();
+            //this.DeviceTwo = new DeviceContext();
         }
 
         public class WhenEntityCreated : EndToEndTests
@@ -22,7 +24,7 @@
             [Test]
             public async Task ShouldAppearInSecondDevice()
             {
-                var savedEntity = new TestEntity { Text = "Hello" };
+                var savedEntity = new TestEntity { IdProp = 123 };
                 var dbOne = this.DeviceOne.CreateLiteDatabase();
                 dbOne.GetCollection<TestEntity>().Insert(savedEntity);
 
@@ -33,7 +35,7 @@
                 var actual = dbTwo.GetCollection<TestEntity>().FindOne(x => true);
 
                 Assert.IsNotNull(actual);
-                Assert.AreEqual(actual.Text, savedEntity.Text);
+                Assert.AreEqual(actual.IdProp, savedEntity.IdProp);
             }
         }
 

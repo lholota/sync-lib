@@ -1,4 +1,6 @@
-﻿namespace LiteDB.Sync.Tests.Tools
+﻿using System;
+
+namespace LiteDB.Sync.Tests.Tools
 {
     using System.IO;
 
@@ -7,7 +9,7 @@
         public DeviceContext()
         {
             this.CloudProvider = new TestsSyncCloudProvider(this);
-            this.Service = new LiteSyncService(this.CloudProvider, TODO);
+            // this.Service = new LiteSyncService(this.CloudProvider, null);
             
             this.Stream = new MemoryStream();
         }
@@ -20,7 +22,8 @@
 
         public LiteSyncDatabase CreateLiteDatabase()
         {
-            return new LiteSyncDatabase(this.Service, Stream);
+            throw new NotImplementedException();
+            // return new LiteSyncDatabase(Stream);
         }
     }
 }

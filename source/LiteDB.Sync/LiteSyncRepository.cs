@@ -2,26 +2,15 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq.Expressions;
 
     public class LiteSyncRepository : ILiteRepository
     {
         private readonly ILiteDatabase db;
 
-        public LiteSyncRepository(string connectionString, BsonMapper mapper = null)
+        public LiteSyncRepository(LiteSyncDatabase db)
         {
-            this.db = new LiteSyncDatabase(connectionString, mapper);
-        }
-
-        public LiteSyncRepository(ConnectionString connectionString, BsonMapper mapper = null)
-        {
-            this.db = new LiteSyncDatabase(connectionString, mapper);
-        }
-
-        public LiteSyncRepository(Stream stream, BsonMapper mapper = null, string password = null)
-        {
-            this.db = new LiteSyncDatabase(stream, mapper, password);
+            this.db = db;
         }
 
         #region Shortchut from Database/Engine

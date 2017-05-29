@@ -1,9 +1,11 @@
-﻿namespace LiteDB.Sync.Entities
+﻿namespace LiteDB.Sync.Internal
 {
-    public class DeletedEntity
+    internal class DeletedEntity
     {
         public string CollectionName { get; set; }
 
         public BsonValue EntityId { get; set; }
+
+        public int ChangeTime { get; set; }
     }
 }

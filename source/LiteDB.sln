@@ -9,6 +9,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LiteDB.dotnet", "LiteDB\Lit
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiteDB.Sync.Tests", "LiteDB.Sync.Tests\LiteDB.Sync.Tests.csproj", "{621B3E66-17CF-4B2C-979F-0E83C63A35B3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Providers", "Providers", "{43625880-17D1-4418-92CA-32A78722DE08}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiteDb.Sync.OneDrive", "LiteDb.Sync.OneDrive\LiteDb.Sync.OneDrive.csproj", "{01B09601-7625-47CC-B83D-CCE3C7990B10}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,8 +31,15 @@ Global
 		{621B3E66-17CF-4B2C-979F-0E83C63A35B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{621B3E66-17CF-4B2C-979F-0E83C63A35B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{621B3E66-17CF-4B2C-979F-0E83C63A35B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{01B09601-7625-47CC-B83D-CCE3C7990B10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{01B09601-7625-47CC-B83D-CCE3C7990B10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{01B09601-7625-47CC-B83D-CCE3C7990B10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{01B09601-7625-47CC-B83D-CCE3C7990B10}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{01B09601-7625-47CC-B83D-CCE3C7990B10} = {43625880-17D1-4418-92CA-32A78722DE08}
 	EndGlobalSection
 EndGlobal

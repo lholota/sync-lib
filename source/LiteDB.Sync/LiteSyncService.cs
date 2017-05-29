@@ -4,9 +4,22 @@ using LiteDB.Sync.Entities;
 
 namespace LiteDB.Sync
 {
-    public abstract class LiteSyncService : ILiteSyncService
+    using System.Collections.Generic;
+
+    public class LiteSyncService : ILiteSyncService
     {
-        private const string LocalHeadId = "LocalHead";
+        private readonly Func<FileMode, LiteDatabase> dbFactoryFunc;
+        
+        public LiteSyncService(ILiteSyncCloudProvider cloudProvider, Func<FileMode, LiteDatabase> dbFactoryFunc, IEnumerable<string> syncedCollections)
+        {
+            this.CloudStorageProvider = cloudProvider;
+            this.SyncedCollections = syncedCollections;
+            this.dbFactoryFunc = dbFactoryFunc;
+        }
+
+        public IEnumerable<string> SyncedCollections { get; }
+
+        public ILiteSyncCloudProvider CloudStorageProvider { get; }
 
         public void StartSyncWorker()
         {
@@ -20,26 +33,46 @@ namespace LiteDB.Sync
 
         public Task SyncNow()
         {
-            var localHead = GetLocalHead();
-            /*
-             * Get state
-             * Check local changes
-             * Pull remote changes
-             * Resolve conflicts if they happen
-             * Push local changes + resolutions to the cloud
-             */
+            using (var db = this.dbFactoryFunc.Invoke(FileMode.Exclusive))
+            {
+                using (var tx = db.BeginTrans())
+                {
+                    var localHead = db.GetSyncHead();
 
-            throw new System.NotImplementedException();
+                    var remoteChanges = this.CloudStorageProvider.Pull(localHead.TransactionId);
+                    var localChanges = this.GetLocalChanges(db);
+
+                    /*
+                     * Get state
+                     * Pull remote changes
+                     * Flatten the remote changes
+                     * Check local changes (need them for conflict detection...)
+                     * Apply changes, resolve conflicts if they happen
+                     * Push local changes + resolutions to the cloud
+                     */
+
+                    throw new System.NotImplementedException();
+                }
+            }
         }
 
-        protected abstract ILiteSyncCloudProvider GetProvider();
-
-        protected abstract object GetConflictResolver();
-
-        private StoreHead GetLocalHead()
+        private Patch GetLocalChanges(LiteDatabase db)
         {
-            throw new NotImplementedException();
-            //return db.GetCollection<StoreHead>(SyncCollectionName).FindById(LocalHeadId);
+            var pushTransaction = new Patch();
+
+            foreach (var collectionName in this.SyncedCollections)
+            {
+                var collection = db.GetCollection(collectionName);
+                var dirtyEntities = collection.FindDirtyEntities();
+
+                pushTransaction.AddChanges(collectionName, dirtyEntities);
+            }
+
+            var deletedEntities = db.FindDeletedEntities();
+
+            pushTransaction.AddDeletes(deletedEntities);
+
+            return pushTransaction;
         }
     }
 }

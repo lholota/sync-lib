@@ -1,38 +1,16 @@
-﻿using System.Linq;
-using LiteDB.Sync.Entities;
+﻿using System.Collections.Generic;
 
 namespace LiteDB.Sync
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-
     public class LiteSyncDatabase : ILiteDatabase
     {
-        private const string DeletedEntitiesCollection = "SyncDeleted";
-
         private readonly LiteDatabase db;
+        private readonly ILiteSyncService syncService;
 
-        public LiteSyncDatabase(string connectionString, BsonMapper mapper = null)
+        public LiteSyncDatabase(ILiteSyncService syncService, LiteDatabase db)
         {
-            this.db = new LiteDatabase(connectionString, mapper);
-        }
-
-        public LiteSyncDatabase(ConnectionString connectionString, BsonMapper mapper = null)
-        {
-            this.db = new LiteDatabase(connectionString, mapper);
-        }
-
-        public LiteSyncDatabase(Stream stream, BsonMapper mapper = null, string password = null)
-        {
-            this.db = new LiteDatabase(stream, mapper, password);
-        }
-
-        public LiteSyncDatabase(IDiskService diskService, 
-                            BsonMapper mapper = null, string password = null,
-                            TimeSpan? timeout = null, int cacheSize = 5000, Logger log = null)
-        {
-            this.db = new LiteDatabase(diskService, mapper, password, timeout, cacheSize, log);
+            this.syncService = syncService;
+            this.db = db;
         }
 
         public Logger Log => this.db.Log;
@@ -42,28 +20,6 @@ namespace LiteDB.Sync
         public LiteEngine Engine => this.db.Engine;
 
         public LiteStorage FileStorage => this.db.FileStorage;
-
-        public void InsertDeletedEntityId(string collectionName, BsonValue id)
-        {
-            var pointer = new DeletedEntity
-            {
-                CollectionName = collectionName,
-                EntityId = id
-            };
-
-            this.db.GetCollection<DeletedEntity>(DeletedEntitiesCollection).Insert(pointer);
-        }
-
-        public void InsertDeletedEntityIds(string collectionName, IEnumerable<BsonValue> ids)
-        {
-            var pointers = ids.Select(x => new DeletedEntity
-            {
-                CollectionName = collectionName,
-                EntityId = x
-            });
-
-            this.db.GetCollection<DeletedEntity>(DeletedEntitiesCollection).Insert(pointers);
-        }
 
         public ILiteTransaction BeginTrans()
         {
@@ -118,6 +74,6 @@ namespace LiteDB.Sync
         public void Dispose()
         {
             this.db.Dispose();
-        }        
+        }
     }
 }

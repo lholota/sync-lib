@@ -2,8 +2,12 @@ namespace LiteDB.Sync.Entities
 {
     public class EntityOperation
     {
+        public string CollectionName { get; set; }
+
         public EntityOperationType OperationType { get; set; }
 
-        public object Entity { get; set; }
+        public BsonValue EntityId { get; set; }
+
+        public BsonDocument Entity { get; set; }
     }
 }

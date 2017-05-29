@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -48,15 +47,9 @@ namespace LiteDB.Sync
 
             using (var tx = this.database.BeginTrans())
             {
-                var itemsToDelete = this.Find(query);
-                var ids = itemsToDelete
-                    .Cast<ILiteSyncEntity>()
-                    .Select(x => x.BsonId)
-                    .ToArray();
+                result = this.UnderlyingCollection.Delete(query, out IList<BsonValue> deletedIds);
 
-                this.database.InsertDeletedEntityIds(this.Name, ids);
-
-                result = this.UnderlyingCollection.Delete(query);
+                this.database.InsertDeletedEntities(this.Name, deletedIds);
 
                 tx.Commit();
             }
@@ -75,15 +68,9 @@ namespace LiteDB.Sync
 
             using (var tx = this.database.BeginTrans())
             {
-                var itemsToDelete = this.Find(predicate);
-                var ids = itemsToDelete
-                    .Cast<ILiteSyncEntity>()
-                    .Select(x => x.BsonId)
-                    .ToArray();
+                result = this.UnderlyingCollection.Delete(predicate, out IList<BsonValue> deletedIds);
 
-                this.database.InsertDeletedEntityIds(this.Name, ids);
-
-                result = this.UnderlyingCollection.Delete(predicate);
+                this.database.InsertDeletedEntities(this.Name, deletedIds);
 
                 tx.Commit();
             }
@@ -102,7 +89,8 @@ namespace LiteDB.Sync
 
             using (var tx = this.database.BeginTrans())
             {
-                this.database.InsertDeletedEntityId(this.Name, id);
+                this.database.InsertDeletedEntity(this.Name, id);
+
                 result = this.UnderlyingCollection.Delete(id);
 
                 tx.Commit();
@@ -133,6 +121,9 @@ namespace LiteDB.Sync
 
         public bool Exists(Expression<Func<T, bool>> predicate)
         {
+            var func = (ILiteSyncEntity x) => x.RequiresSync
+
+            Expression.AndAlso(predicate, )
             return this.UnderlyingCollection.Exists(predicate);
         }
 
