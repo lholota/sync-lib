@@ -24,7 +24,7 @@
             [Test]
             public async Task ShouldAppearInSecondDevice()
             {
-                var savedEntity = new TestEntity { IdProp = 123 };
+                var savedEntity = new TestEntity { Id = 123 };
                 var dbOne = this.DeviceOne.CreateLiteDatabase();
                 dbOne.GetCollection<TestEntity>().Insert(savedEntity);
 
@@ -35,7 +35,7 @@
                 var actual = dbTwo.GetCollection<TestEntity>().FindOne(x => true);
 
                 Assert.IsNotNull(actual);
-                Assert.AreEqual(actual.IdProp, savedEntity.IdProp);
+                Assert.AreEqual(actual.Id, savedEntity.Id);
             }
         }
 

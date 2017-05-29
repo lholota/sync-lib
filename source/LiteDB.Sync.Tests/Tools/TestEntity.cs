@@ -2,15 +2,20 @@
 {
     public class TestEntity : ILiteSyncEntity
     {
+        public TestEntity()
+        {
+        }
+
+        public TestEntity(int id)
+        {
+            this.Id = id;
+        }
+
         [BsonId]
-        public int IdProp { get; set; }
+        public int Id { get; set; }
 
-        public string StringProp { get; set; }
+        public string Text { get; set; }
 
-        public bool RequiresSync { get; set; }
-
-        public int LastChangeTime { get; set; }
-
-        public BsonValue BsonId => new BsonValue(this.IdProp);
+        public EntitySyncState SyncState { get; set; }
     }
 }

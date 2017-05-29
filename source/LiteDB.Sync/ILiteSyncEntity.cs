@@ -2,8 +2,6 @@
 {
     public interface ILiteSyncEntity
     {
-        bool RequiresSync { get; set; }
-
-        BsonValue BsonId { get; }
+        EntitySyncState SyncState { get; set; }
     }
 }

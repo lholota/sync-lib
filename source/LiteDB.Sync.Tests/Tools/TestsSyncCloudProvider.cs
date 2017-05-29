@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using LiteDB.Sync.Entities;
+using LiteDB.Sync.Contract;
 
 namespace LiteDB.Sync.Tests.Tools
 {

@@ -1,10 +1,11 @@
-﻿namespace LiteDb.Sync.OneDrive
+﻿using LiteDB.Sync.Contract;
+
+namespace LiteDb.Sync.OneDrive
 {
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using LiteDB.Sync;
-    using LiteDB.Sync.Entities;
 
     public class OneDriveCloudProvider : ILiteSyncCloudProvider
     {
@@ -13,7 +14,7 @@
             throw new NotImplementedException();
         }
 
-        public Task Push(object args)
+        public Task Push(Patch args)
         {
             throw new NotImplementedException();
         }

@@ -1,12 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using LiteDB.Sync.Entities;
-using LiteDB.Sync.Internal;
+using LiteDB.Sync.Contract;
 using LiteDB.Sync.Tests.Tools;
 using NUnit.Framework;
 
 namespace LiteDB.Sync.Tests.Entities
 {
+    // TODO: Change the logic, no deleted entities anymore...
+
     [TestFixture]
     public class PatchTests
     {
@@ -54,7 +55,7 @@ namespace LiteDB.Sync.Tests.Entities
             }
         }
 
-        public class WhenAddingChangesDeletes : PatchTests
+        public class WhenAddingChanges : PatchTests
         {
             [Test]
             public void ShouldContainAddedChanges()
@@ -73,64 +74,18 @@ namespace LiteDB.Sync.Tests.Entities
             }
 
             [Test]
-            public void ShouldContainAddedDeletes()
+            public void ShouldNotContainPayloadIfEntityDeleted()
             {
-                var deletedEntity = new DeletedEntity();
-                deletedEntity.EntityId = 123;
-                deletedEntity.CollectionName = CollectionName;
-
-                var patch = new Patch();
-                patch.AddDeletes(new[] {deletedEntity});
-
-                var operation = patch.Operations.Single();
-
-                Assert.AreEqual(123, operation.EntityId);
-                Assert.AreEqual(EntityOperationType.Delete, operation.OperationType);
-                Assert.IsNull(operation.Entity);
-                Assert.AreEqual(CollectionName, operation.CollectionName);
-            }
-
-            [Test]
-            public void ShouldNotContainChangeIfEntityIsDeleted()
-            {
-                var deletedEntity = new DeletedEntity();
-                deletedEntity.EntityId = 123;
-                deletedEntity.CollectionName = CollectionName;
-                deletedEntity.ChangeTime = 2;
-
-                var changedEntity = GetDocument(123, 1);
+                var changedEntity = GetDocument(123, 1, syncState:EntitySyncState.RequiresSyncDeleted);
 
                 var patch = new Patch();
                 patch.AddChanges(CollectionName, new []{ changedEntity });
-                patch.AddDeletes(new[] { deletedEntity });
 
                 var operation = patch.Operations.Single();
 
                 Assert.AreEqual(123, operation.EntityId);
                 Assert.AreEqual(EntityOperationType.Delete, operation.OperationType);
                 Assert.IsNull(operation.Entity);
-                Assert.AreEqual(CollectionName, operation.CollectionName);
-            }
-
-            [Test]
-            public void ShouldContainChangeIfEntityWasRecreatedAfterDelete()
-            {
-                var deletedEntity = new DeletedEntity();
-                deletedEntity.EntityId = 123;
-                deletedEntity.CollectionName = CollectionName;
-                deletedEntity.ChangeTime = 1;
-
-                var changedEntity = GetDocument(123, 2);
-
-                var patch = new Patch();
-                patch.AddChanges(CollectionName, new[] { changedEntity });
-                patch.AddDeletes(new[] { deletedEntity });
-
-                var operation = patch.Operations.Single();
-
-                Assert.AreEqual(123, operation.EntityId);
-                Assert.AreEqual(EntityOperationType.Upsert, operation.OperationType);
-                Assert.AreEqual(changedEntity, operation.Entity);
                 Assert.AreEqual(CollectionName, operation.CollectionName);
             }
         }
@@ -153,7 +108,7 @@ namespace LiteDB.Sync.Tests.Entities
                 Assert.AreEqual(123, combined.Operations[0].EntityId);
 
                 BsonValue actualStringPropValue;
-                combined.Operations[0].Entity.TryGetValue(nameof(TestEntity.StringProp), out actualStringPropValue);
+                combined.Operations[0].Entity.TryGetValue(nameof(TestEntity.Text), out actualStringPropValue);
 
                 Assert.IsNotNull(actualStringPropValue);
                 Assert.AreEqual("Value2", actualStringPropValue.ToString());
@@ -211,13 +166,12 @@ namespace LiteDB.Sync.Tests.Entities
             }
         }
 
-        protected static BsonDocument GetDocument(int id, int changeTime, string stringPropValue = null)
+        protected static BsonDocument GetDocument(int id, int changeTime, string stringPropValue = null, EntitySyncState syncState = EntitySyncState.RequiresSync)
         {
             return BsonMapper.Global.ToDocument(new TestEntity
             {
-                IdProp = id,
-                LastChangeTime = changeTime,
-                StringProp = stringPropValue
+                Id = id,
+                Text = stringPropValue
             });
         }
     }

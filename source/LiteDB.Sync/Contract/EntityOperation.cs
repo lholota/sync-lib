@@ -1,4 +1,4 @@
-namespace LiteDB.Sync.Entities
+namespace LiteDB.Sync.Contract
 {
     public class EntityOperation
     {

@@ -49,8 +49,6 @@ namespace LiteDB.Sync
             {
                 result = this.UnderlyingCollection.Delete(query, out IList<BsonValue> deletedIds);
 
-                this.database.InsertDeletedEntities(this.Name, deletedIds);
-
                 tx.Commit();
             }
 
@@ -70,8 +68,6 @@ namespace LiteDB.Sync
             {
                 result = this.UnderlyingCollection.Delete(predicate, out IList<BsonValue> deletedIds);
 
-                this.database.InsertDeletedEntities(this.Name, deletedIds);
-
                 tx.Commit();
             }
 
@@ -89,8 +85,6 @@ namespace LiteDB.Sync
 
             using (var tx = this.database.BeginTrans())
             {
-                this.database.InsertDeletedEntity(this.Name, id);
-
                 result = this.UnderlyingCollection.Delete(id);
 
                 tx.Commit();
@@ -121,9 +115,9 @@ namespace LiteDB.Sync
 
         public bool Exists(Expression<Func<T, bool>> predicate)
         {
-            var func = (ILiteSyncEntity x) => x.RequiresSync
+            //var func = (ILiteSyncEntity x) => x.SyncState
 
-            Expression.AndAlso(predicate, )
+            //Expression.AndAlso(predicate, )
             return this.UnderlyingCollection.Exists(predicate);
         }
 
@@ -306,7 +300,7 @@ namespace LiteDB.Sync
 
             if (syncedEntity != null)
             {
-                syncedEntity.RequiresSync = true;
+                syncedEntity.SyncState = EntitySyncState.RequiresSync;
             }
         }
     }

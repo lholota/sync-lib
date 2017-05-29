@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using LiteDB.Sync.Internal;
 
-namespace LiteDB.Sync.Entities
+namespace LiteDB.Sync.Contract
 {
     public class Patch
     {
@@ -16,11 +15,6 @@ namespace LiteDB.Sync.Entities
         internal void AddChanges(string collectionName, IEnumerable<BsonDocument> dirtyEntities)
         {
             
-        }
-
-        internal void AddDeletes(IEnumerable<DeletedEntity> deletes)
-        {
-
         }
     }
 }

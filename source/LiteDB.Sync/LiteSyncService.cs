@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using LiteDB.Sync.Entities;
+using LiteDB.Sync.Contract;
 
 namespace LiteDB.Sync
 {
@@ -9,7 +9,7 @@ namespace LiteDB.Sync
     public class LiteSyncService : ILiteSyncService
     {
         private readonly Func<FileMode, LiteDatabase> dbFactoryFunc;
-        
+
         public LiteSyncService(ILiteSyncCloudProvider cloudProvider, Func<FileMode, LiteDatabase> dbFactoryFunc, IEnumerable<string> syncedCollections)
         {
             this.CloudStorageProvider = cloudProvider;
@@ -29,6 +29,21 @@ namespace LiteDB.Sync
         public void StopSyncWorker()
         {
             throw new System.NotImplementedException();
+        }
+
+        public void EnsureIndices()
+        {
+            using (var db = this.dbFactoryFunc.Invoke(FileMode.Exclusive))
+            using (var tx = db.BeginTrans())
+            {
+                foreach (var collectionName in this.SyncedCollections)
+                {
+                    var collection = db.GetCollection(collectionName);
+                    collection.EnsureIndex(nameof(ILiteSyncEntity.SyncState));
+                }
+
+                tx.Commit();
+            }
         }
 
         public Task SyncNow()
@@ -67,10 +82,6 @@ namespace LiteDB.Sync
 
                 pushTransaction.AddChanges(collectionName, dirtyEntities);
             }
-
-            var deletedEntities = db.FindDeletedEntities();
-
-            pushTransaction.AddDeletes(deletedEntities);
 
             return pushTransaction;
         }

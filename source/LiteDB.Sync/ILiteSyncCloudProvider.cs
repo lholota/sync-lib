@@ -1,9 +1,10 @@
-﻿namespace LiteDB.Sync
+﻿using LiteDB.Sync.Contract;
+
+namespace LiteDB.Sync
 {
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using Entities;
 
     public interface ILiteSyncCloudProvider
     {
