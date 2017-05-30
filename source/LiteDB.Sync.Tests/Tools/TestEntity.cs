@@ -16,7 +16,7 @@
 
         public string Text { get; set; }
 
-        public EntitySyncState SyncState { get; set; }
+        public int SyncState { get; set; }
     }
 
     public class NonSyncedTestEntity

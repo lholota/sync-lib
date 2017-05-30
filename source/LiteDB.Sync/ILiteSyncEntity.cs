@@ -2,6 +2,6 @@
 {
     public interface ILiteSyncEntity
     {
-        EntitySyncState SyncState { get; set; }
+        int SyncState { get; set; }
     }
 }

@@ -13,7 +13,7 @@ namespace LiteDB.Sync
 
         internal static IEnumerable<BsonDocument> FindDirtyEntities(this ILiteCollection<BsonDocument> collection)
         {
-            var query = Query.Not(Query.EQ(nameof(ILiteSyncEntity.SyncState), new BsonValue(EntitySyncState.None)));
+            var query = Query.Not(Query.EQ(nameof(ILiteSyncEntity.SyncState), new BsonValue(SyncState.None)));
 
             return collection.Find(query);
         }

@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using LiteDB.Sync.Contract;
 using LiteDB.Sync.Tests.Tools;
 using NUnit.Framework;
 
@@ -49,151 +50,151 @@ namespace LiteDB.Sync.Tests
                 var found = this.NativeCollection.FindById(entity.Id);
 
                 Assert.IsNotNull(found, $"The item with id {entity.Id} could not be found.");
-                Assert.AreEqual(EntitySyncState.RequiresSyncDeleted, found.SyncState);
-            }
-        }
-
-        public class WhenDeletingItemsByPredicate : LiteSyncCollectionTests
-        {
-            [Test]
-            public void ShouldDeleteItems()
-            {
-                var entity1 = new TestEntity(1);
-                var entity2 = new TestEntity(2);
-                var entity3 = new TestEntity(3);
-
-                this.NativeCollection.Insert(entity1);
-                this.NativeCollection.Insert(entity2);
-                this.NativeCollection.Insert(entity3);
-
-                var deletedCount = this.SyncedCollection.Delete(x => x.Id <= 2);
-
-                Assert.AreEqual(2, deletedCount);
-
-                var found = this.NativeCollection.FindAll().ToArray();
-
-                Assert.IsNotNull(found);
-                Assert.AreEqual(3, found.Length);
-                Assert.AreEqual(EntitySyncState.RequiresSyncDeleted, found[0].SyncState);
-                Assert.AreEqual(EntitySyncState.RequiresSyncDeleted, found[1].SyncState);
-                Assert.AreEqual(EntitySyncState.None, found[2].SyncState);
+                Assert.AreEqual(SyncState.RequiresSyncDeleted, found.SyncState);
             }
 
-            [Test]
-            public void ShouldIgnoreSoftDeletedItems()
+            public class WhenDeletingItemsByPredicate : LiteSyncCollectionTests
             {
-                var entity1 = new TestEntity(1);
-                entity1.SyncState = EntitySyncState.RequiresSyncDeleted;
+                [Test]
+                public void ShouldDeleteItems()
+                {
+                    var entity1 = new TestEntity(1);
+                    var entity2 = new TestEntity(2);
+                    var entity3 = new TestEntity(3);
 
-                var entity2 = new TestEntity(2);
-                entity2.SyncState = EntitySyncState.RequiresSyncDeleted;
+                    this.NativeCollection.Insert(entity1);
+                    this.NativeCollection.Insert(entity2);
+                    this.NativeCollection.Insert(entity3);
 
-                var entity3 = new TestEntity(3);
+                    var deletedCount = this.SyncedCollection.Delete(x => x.Id <= 2);
 
-                this.NativeCollection.Insert(entity1);
-                this.NativeCollection.Insert(entity2);
-                this.NativeCollection.Insert(entity3);
+                    Assert.AreEqual(2, deletedCount);
 
-                var deletedCount = this.SyncedCollection.Delete(x => x.Id <= 3);
+                    var found = this.NativeCollection.FindAll().ToArray();
 
-                Assert.AreEqual(1, deletedCount);
+                    Assert.IsNotNull(found);
+                    Assert.AreEqual(3, found.Length);
+                    Assert.AreEqual(SyncState.RequiresSyncDeleted, found[0].SyncState);
+                    Assert.AreEqual(SyncState.RequiresSyncDeleted, found[1].SyncState);
+                    Assert.AreEqual(SyncState.None, found[2].SyncState);
+                }
 
-                var found = this.NativeCollection.FindAll().ToArray();
+                [Test]
+                public void ShouldIgnoreSoftDeletedItems()
+                {
+                    var entity1 = new TestEntity(1);
+                    entity1.SyncState = SyncState.RequiresSyncDeleted;
 
-                Assert.IsNotNull(found);
-                Assert.AreEqual(3, found.Length);
-                Assert.AreEqual(EntitySyncState.RequiresSyncDeleted, found[0].SyncState);
-                Assert.AreEqual(EntitySyncState.RequiresSyncDeleted, found[1].SyncState);
-                Assert.AreEqual(EntitySyncState.RequiresSyncDeleted, found[2].SyncState);
+                    var entity2 = new TestEntity(2);
+                    entity2.SyncState = SyncState.RequiresSyncDeleted;
+
+                    var entity3 = new TestEntity(3);
+
+                    this.NativeCollection.Insert(entity1);
+                    this.NativeCollection.Insert(entity2);
+                    this.NativeCollection.Insert(entity3);
+
+                    var deletedCount = this.SyncedCollection.Delete(x => x.Id <= 3);
+
+                    Assert.AreEqual(1, deletedCount);
+
+                    var found = this.NativeCollection.FindAll().ToArray();
+
+                    Assert.IsNotNull(found);
+                    Assert.AreEqual(3, found.Length);
+                    Assert.AreEqual(SyncState.RequiresSyncDeleted, found[0].SyncState);
+                    Assert.AreEqual(SyncState.RequiresSyncDeleted, found[1].SyncState);
+                    Assert.AreEqual(SyncState.RequiresSyncDeleted, found[2].SyncState);
+                }
+
+                [Test]
+                public void ShouldReturnZeroIfNoItemsMatch()
+                {
+                    var entity3 = new TestEntity(3);
+                    this.NativeCollection.Insert(entity3);
+
+                    var deletedCount = this.SyncedCollection.Delete(x => x.Id <= 2);
+
+                    Assert.AreEqual(0, deletedCount);
+
+                    var found = this.NativeCollection.FindAll().ToArray();
+
+                    Assert.IsNotNull(found);
+                    Assert.AreEqual(1, found.Length);
+                    Assert.AreEqual(SyncState.None, found[0].SyncState);
+                }
             }
 
-            [Test]
-            public void ShouldReturnZeroIfNoItemsMatch()
+            public class WhenDeletingItemsByQuery : LiteSyncCollectionTests
             {
-                var entity3 = new TestEntity(3);
-                this.NativeCollection.Insert(entity3);
+                [Test]
+                public void ShouldDeleteItems()
+                {
+                    var entity1 = new TestEntity(1);
+                    var entity2 = new TestEntity(2);
+                    var entity3 = new TestEntity(3);
 
-                var deletedCount = this.SyncedCollection.Delete(x => x.Id <= 2);
+                    this.NativeCollection.Insert(entity1);
+                    this.NativeCollection.Insert(entity2);
+                    this.NativeCollection.Insert(entity3);
 
-                Assert.AreEqual(0, deletedCount);
+                    var deletedCount = this.SyncedCollection.Delete(Query.LTE("_id", new BsonValue(2)));
 
-                var found = this.NativeCollection.FindAll().ToArray();
+                    Assert.AreEqual(2, deletedCount);
 
-                Assert.IsNotNull(found);
-                Assert.AreEqual(1, found.Length);
-                Assert.AreEqual(EntitySyncState.None, found[0].SyncState);
-            }
-        }
+                    var found = this.NativeCollection.FindAll().ToArray();
 
-        public class WhenDeletingItemsByQuery : LiteSyncCollectionTests
-        {
-            [Test]
-            public void ShouldDeleteItems()
-            {
-                var entity1 = new TestEntity(1);
-                var entity2 = new TestEntity(2);
-                var entity3 = new TestEntity(3);
+                    Assert.IsNotNull(found);
+                    Assert.AreEqual(3, found.Length);
+                    Assert.AreEqual(SyncState.RequiresSyncDeleted, found[0].SyncState);
+                    Assert.AreEqual(SyncState.RequiresSyncDeleted, found[1].SyncState);
+                    Assert.AreEqual(SyncState.None, found[2].SyncState);
+                }
 
-                this.NativeCollection.Insert(entity1);
-                this.NativeCollection.Insert(entity2);
-                this.NativeCollection.Insert(entity3);
+                [Test]
+                public void ShouldIgnoreSoftDeletedItems()
+                {
+                    var entity1 = new TestEntity(1);
+                    entity1.SyncState = SyncState.RequiresSyncDeleted;
 
-                var deletedCount = this.SyncedCollection.Delete(Query.LTE("_id", new BsonValue(2)));
+                    var entity2 = new TestEntity(2);
+                    entity2.SyncState = SyncState.RequiresSyncDeleted;
 
-                Assert.AreEqual(2, deletedCount);
+                    var entity3 = new TestEntity(3);
 
-                var found = this.NativeCollection.FindAll().ToArray();
+                    this.NativeCollection.Insert(entity1);
+                    this.NativeCollection.Insert(entity2);
+                    this.NativeCollection.Insert(entity3);
 
-                Assert.IsNotNull(found);
-                Assert.AreEqual(3, found.Length);
-                Assert.AreEqual(EntitySyncState.RequiresSyncDeleted, found[0].SyncState);
-                Assert.AreEqual(EntitySyncState.RequiresSyncDeleted, found[1].SyncState);
-                Assert.AreEqual(EntitySyncState.None, found[2].SyncState);
-            }
+                    var deletedCount = this.SyncedCollection.Delete(Query.LTE("_id", new BsonValue(3)));
 
-            [Test]
-            public void ShouldIgnoreSoftDeletedItems()
-            {
-                var entity1 = new TestEntity(1);
-                entity1.SyncState = EntitySyncState.RequiresSyncDeleted;
+                    Assert.AreEqual(1, deletedCount);
 
-                var entity2 = new TestEntity(2);
-                entity2.SyncState = EntitySyncState.RequiresSyncDeleted;
+                    var found = this.NativeCollection.FindAll().ToArray();
 
-                var entity3 = new TestEntity(3);
+                    Assert.IsNotNull(found);
+                    Assert.AreEqual(3, found.Length);
+                    Assert.AreEqual(SyncState.RequiresSyncDeleted, found[0].SyncState);
+                    Assert.AreEqual(SyncState.RequiresSyncDeleted, found[1].SyncState);
+                    Assert.AreEqual(SyncState.RequiresSyncDeleted, found[2].SyncState);
+                }
 
-                this.NativeCollection.Insert(entity1);
-                this.NativeCollection.Insert(entity2);
-                this.NativeCollection.Insert(entity3);
+                [Test]
+                public void ShouldReturnZeroIfNoItemsMatch()
+                {
+                    var entity3 = new TestEntity(3);
+                    this.NativeCollection.Insert(entity3);
 
-                var deletedCount = this.SyncedCollection.Delete(Query.LTE("_id", new BsonValue(3)));
+                    var deletedCount = this.SyncedCollection.Delete(Query.LTE("_id", new BsonValue(2)));
 
-                Assert.AreEqual(1, deletedCount);
+                    Assert.AreEqual(0, deletedCount);
 
-                var found = this.NativeCollection.FindAll().ToArray();
+                    var found = this.NativeCollection.FindAll().ToArray();
 
-                Assert.IsNotNull(found);
-                Assert.AreEqual(3, found.Length);
-                Assert.AreEqual(EntitySyncState.RequiresSyncDeleted, found[0].SyncState);
-                Assert.AreEqual(EntitySyncState.RequiresSyncDeleted, found[1].SyncState);
-                Assert.AreEqual(EntitySyncState.RequiresSyncDeleted, found[2].SyncState);
-            }
-
-            [Test]
-            public void ShouldReturnZeroIfNoItemsMatch()
-            {
-                var entity3 = new TestEntity(3);
-                this.NativeCollection.Insert(entity3);
-
-                var deletedCount = this.SyncedCollection.Delete(Query.LTE("_id", new BsonValue(2)));
-
-                Assert.AreEqual(0, deletedCount);
-
-                var found = this.NativeCollection.FindAll().ToArray();
-
-                Assert.IsNotNull(found);
-                Assert.AreEqual(1, found.Length);
-                Assert.AreEqual(EntitySyncState.None, found[0].SyncState);
+                    Assert.IsNotNull(found);
+                    Assert.AreEqual(1, found.Length);
+                    Assert.AreEqual(SyncState.None, found[0].SyncState);
+                }
             }
         }
     }

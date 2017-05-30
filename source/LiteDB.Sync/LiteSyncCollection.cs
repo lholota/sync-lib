@@ -2,19 +2,23 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
-using System.Reflection;
+using LiteDB.Sync.Contract;
 
 namespace LiteDB.Sync
 {
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
-    public class LiteSyncCollection<T> : ILiteCollection<T> 
+    public class LiteSyncCollection<T> : ILiteCollection<T>
     {
+        private readonly Query ignoreDeletedQuery;
+        private readonly Expression<Func<T, bool>> ignoreDeletedPredicate = x => ((ILiteSyncEntity)x).SyncState != SyncState.RequiresSyncDeleted;
         private readonly LiteSyncDatabase database;
 
         internal LiteSyncCollection(ILiteCollection<T> underlyingCollection, LiteSyncDatabase database)
         {
             this.UnderlyingCollection = underlyingCollection.UnderlyingCollection;
             this.database = database;
+
+            this.ignoreDeletedQuery = this.CreateIgnoreSoftDeletedQuery();
         }
 
         public LiteCollection<T> UnderlyingCollection { get; }
@@ -23,17 +27,19 @@ namespace LiteDB.Sync
 
         public int Count()
         {
-            return this.UnderlyingCollection.Count();
+            return this.UnderlyingCollection.Count(this.ignoreDeletedQuery);
         }
 
         public int Count(Query query)
         {
-            return this.UnderlyingCollection.Count(query);
+            var combined = Query.And(query, this.ignoreDeletedQuery);
+            return this.UnderlyingCollection.Count(combined);
         }
 
         public int Count(Expression<Func<T, bool>> predicate)
         {
-            return this.UnderlyingCollection.Count(predicate);
+            var combined = this.CombineWithIgnoreDeleted(predicate);
+            return this.UnderlyingCollection.Count(combined);
         }
 
         public int Delete(Query query)
@@ -61,12 +67,12 @@ namespace LiteDB.Sync
 
                 var syncItem = (ILiteSyncEntity) item;
 
-                if (syncItem.SyncState == EntitySyncState.RequiresSyncDeleted)
+                if (syncItem.SyncState == SyncState.RequiresSyncDeleted)
                 {
                     return false;
                 }
 
-                syncItem.SyncState = EntitySyncState.RequiresSyncDeleted;
+                syncItem.SyncState = SyncState.RequiresSyncDeleted;
 
                 result = this.UnderlyingCollection.Update(item);
 
@@ -179,17 +185,19 @@ namespace LiteDB.Sync
 
         public long LongCount()
         {
-            return this.UnderlyingCollection.LongCount();
+            return this.UnderlyingCollection.LongCount(this.ignoreDeletedQuery);
         }
 
         public long LongCount(Query query)
         {
-            return this.UnderlyingCollection.LongCount(query);
+            var combined = Query.And(query, this.ignoreDeletedQuery);
+            return this.UnderlyingCollection.LongCount(combined);
         }
 
         public long LongCount(Expression<Func<T, bool>> predicate)
         {
-            return this.UnderlyingCollection.LongCount(predicate);
+            var combined = this.CombineWithIgnoreDeleted(predicate);
+            return this.UnderlyingCollection.LongCount(combined);
         }
 
         public BsonValue Max(string field)
@@ -264,6 +272,12 @@ namespace LiteDB.Sync
             return this.UnderlyingCollection.Upsert(entities);
         }
 
+        private Expression<Func<T, bool>> CombineWithIgnoreDeleted(Expression<Func<T, bool>> original)
+        {
+            var body = Expression.AndAlso(this.ignoreDeletedPredicate.Body, original.Body);
+            return Expression.Lambda<Func<T, bool>>(body, original.Parameters[0]);
+        }
+
         private int BatchDelete(Func<IEnumerable<T>> findAllFunc)
         {
             int result = 0;
@@ -274,14 +288,14 @@ namespace LiteDB.Sync
 
                 foreach (var item in toBeDeleted)
                 {
-                    var syncItem = (ILiteSyncEntity)item;
+                    var syncItem = (ILiteSyncEntity) item;
 
-                    if (syncItem.SyncState == EntitySyncState.RequiresSyncDeleted)
+                    if (syncItem.SyncState == SyncState.RequiresSyncDeleted)
                     {
                         continue;
                     }
 
-                    syncItem.SyncState = EntitySyncState.RequiresSyncDeleted;
+                    syncItem.SyncState = SyncState.RequiresSyncDeleted;
 
                     this.UnderlyingCollection.Update(item);
                     result++;
@@ -312,8 +326,14 @@ namespace LiteDB.Sync
 
             if (syncedEntity != null)
             {
-                syncedEntity.SyncState = EntitySyncState.RequiresSync;
+                syncedEntity.SyncState = SyncState.RequiresSync;
             }
+        }
+
+        private Query CreateIgnoreSoftDeletedQuery()
+        {
+            var fieldName = this.database.Mapper.ResolveFieldName.Invoke(nameof(ILiteSyncEntity.SyncState));
+            return Query.Not(Query.EQ(fieldName, new BsonValue(SyncState.RequiresSyncDeleted)));
         }
     }
 }
