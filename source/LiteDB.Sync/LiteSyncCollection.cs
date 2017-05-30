@@ -99,15 +99,14 @@ namespace LiteDB.Sync
 
         public bool Exists(Query query)
         {
-            return this.UnderlyingCollection.Exists(query);
+            var combined = Query.And(query, this.ignoreDeletedQuery);
+            return this.UnderlyingCollection.Exists(combined);
         }
 
         public bool Exists(Expression<Func<T, bool>> predicate)
         {
-            //var func = (ILiteSyncEntity x) => x.SyncState
-
-            //Expression.AndAlso(predicate, )
-            return this.UnderlyingCollection.Exists(predicate);
+            var combined = this.CombineWithIgnoreDeleted(predicate);
+            return this.UnderlyingCollection.Exists(combined);
         }
 
         public IEnumerable<T> Find(Query query, int skip = 0, int limit = int.MaxValue)
