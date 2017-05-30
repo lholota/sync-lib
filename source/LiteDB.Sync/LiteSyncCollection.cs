@@ -112,32 +112,45 @@ namespace LiteDB.Sync
 
         public IEnumerable<T> Find(Query query, int skip = 0, int limit = int.MaxValue)
         {
-            return this.UnderlyingCollection.Find(query, skip, limit);
+            var combined = Query.And(query, this.ignoreDeletedQuery);
+            return this.UnderlyingCollection.Find(combined, skip, limit);
         }
 
         public IEnumerable<T> Find(Expression<Func<T, bool>> predicate, int skip = 0, int limit = int.MaxValue)
         {
-            return this.UnderlyingCollection.Find(predicate, skip, limit);
+            var combined = this.CombineWithIgnoreDeleted(predicate);
+            return this.UnderlyingCollection.Find(combined, skip, limit);
         }
 
         public IEnumerable<T> FindAll()
         {
-            return this.UnderlyingCollection.FindAll();
+            return this.UnderlyingCollection.Find(this.ignoreDeletedPredicate);
         }
 
         public T FindById(BsonValue id)
         {
-            return this.UnderlyingCollection.FindById(id);
+            var result = this.UnderlyingCollection.FindById(id);
+
+            var syncResult = (ILiteSyncEntity) result;
+
+            if (syncResult.SyncState == SyncState.RequiresSyncDeleted)
+            {
+                return default(T);
+            }
+
+            return result;
         }
 
         public T FindOne(Query query)
         {
-            return this.UnderlyingCollection.FindOne(query);
+            var combined = Query.And(query, this.ignoreDeletedQuery);
+            return this.UnderlyingCollection.FindOne(combined);
         }
 
         public T FindOne(Expression<Func<T, bool>> predicate)
         {
-            return this.UnderlyingCollection.FindOne(predicate);
+            var combined = this.CombineWithIgnoreDeleted(predicate);
+            return this.UnderlyingCollection.FindOne(combined);
         }
 
         public IEnumerable<IndexInfo> GetIndexes()

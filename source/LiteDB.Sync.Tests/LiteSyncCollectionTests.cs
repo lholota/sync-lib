@@ -25,8 +25,11 @@ namespace LiteDB.Sync.Tests
             this.SyncServiceMock.Setup(x => x.SyncedCollections).Returns(new[] {"Dummy"});
 
             this.Db = new LiteSyncDatabase(this.SyncServiceMock.Object, this.InnerDb);
+
             this.SyncedCollection = this.Db.GetCollection<TestEntity>("Dummy");
             this.NativeCollection = this.InnerDb.GetCollection<TestEntity>("Dummy");
+
+            this.NativeCollection.EnsureIndex(nameof(TestEntity.Text));
 
             Assert.IsInstanceOf<LiteSyncCollection<TestEntity>>(this.SyncedCollection);
         }
