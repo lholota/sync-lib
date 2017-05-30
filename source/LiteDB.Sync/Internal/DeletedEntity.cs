@@ -2,6 +2,11 @@
 {
     internal class DeletedEntity
     {
+        public static BsonValue CreateId(string collectionName, BsonValue id)
+        {
+            return $"{collectionName}_{id}"; // TODO: Use hashing
+        }
+
         public DeletedEntity()
         {
         }

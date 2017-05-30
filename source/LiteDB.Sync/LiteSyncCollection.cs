@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
@@ -174,30 +175,75 @@ namespace LiteDB.Sync
 
         public BsonValue Insert(T document)
         {
-            this.MarkDirty(document);
+            BsonValue result;
+            
+            using (var tx = this.database.BeginTrans())
+            {
+                this.MarkDirty(document);
 
-            return this.UnderlyingCollection.Insert(document);
+                result = this.UnderlyingCollection.Insert(document);
+
+                var deletedEntityId = DeletedEntity.CreateId(this.Name, result);
+                this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
+
+                tx.Commit();
+            }
+
+            return result;
         }
 
         public void Insert(BsonValue id, T document)
         {
-            this.MarkDirty(document);
+            using (var tx = this.database.BeginTrans())
+            {
+                this.MarkDirty(document);
 
-            this.UnderlyingCollection.Insert(id, document);
+                this.UnderlyingCollection.Insert(id, document);
+
+                var deletedEntityId = DeletedEntity.CreateId(this.Name, id);
+                this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
+
+                tx.Commit();
+            }
         }
 
         public int Insert(IEnumerable<T> docs)
         {
-            this.MarkDirty(docs);
+            int result;
 
-            return this.UnderlyingCollection.Insert(docs);
+            using (var tx = this.database.BeginTrans())
+            {
+                this.MarkDirty(docs);
+
+                result = this.UnderlyingCollection.Insert(docs);
+
+                if (result > 0)
+                {
+                    this.RemoveDeletedEntities(docs);
+                }
+
+                tx.Commit();
+            }
+
+            return result;
         }
 
-        public int InsertBulk(IEnumerable<T> docs, int batchSize = 5000)
+        public int InsertBulk(IEnumerable<T> docs, int batchSize = 5000, Action<IEnumerable<BsonDocument>> batchInsertedAction = null)
         {
             this.MarkDirty(docs);
 
-            return this.UnderlyingCollection.InsertBulk(docs, batchSize);
+            return this.UnderlyingCollection.InsertBulk(docs, batchSize, batch =>
+            {
+                var coll = this.database.GetDeletedEntitiesCollection();
+
+                foreach (var doc in batch)
+                {
+                    var deletedEntityId = DeletedEntity.CreateId(this.Name, doc["_id"]);
+                    coll.Delete(deletedEntityId);
+                }
+
+                batchInsertedAction?.Invoke(batch);
+            });
         }
 
         public long LongCount()
@@ -285,6 +331,19 @@ namespace LiteDB.Sync
             this.MarkDirty(entities);
 
             return this.UnderlyingCollection.Upsert(entities);
+        }
+
+        private void RemoveDeletedEntities(IEnumerable<T> docs)
+        {
+            var deletedEntCollection = this.database.GetDeletedEntitiesCollection();
+
+            foreach (var doc in docs)
+            {
+                var docId = this.database.Mapper.GetEntityId(doc);
+                var deletedEntityId = DeletedEntity.CreateId(this.Name, docId);
+
+                deletedEntCollection.Delete(deletedEntityId);
+            }
         }
 
         private void MarkDirty(IEnumerable<T> entities)

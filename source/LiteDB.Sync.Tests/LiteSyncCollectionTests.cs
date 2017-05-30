@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using LiteDB.Sync.Internal;
 using LiteDB.Sync.Tests.Tools;
 using NUnit.Framework;
 using Moq;
@@ -43,45 +44,9 @@ namespace LiteDB.Sync.Tests
             this.DbStream.Dispose();
         }
 
-        // ALL LOGIC SHOULD BE IGNORED WHEN WORKING WITH NON-SYNCED COLLECTIONS! (???)
-
-       
-
-        public class WhenInsertingIntoNonSyncedCollection : LiteSyncCollectionTests
+        protected void InsertDeletedEntity(int id)
         {
-            
-        }
-
-        public class WhenInsertingIntoSyncedCollection : LiteSyncCollectionTests
-        {
-            /*
-             * Switch to upsert in synced collections (the deleted item still may be in the collection)
-             * Double insert should fail with id problem
-             */
-        }
-
-        public class WhenFindingInNonSyncedCollection : LiteSyncCollectionTests
-        {
-            /*
-             * Logically deleted items should not be returned !!!
-             */
-        }
-
-        public class WhenFindingInSyncedCollection : LiteSyncCollectionTests
-        {
-            /*
-             * Logically deleted items should not be returned !!!
-             */
-        }
-
-        public class WhenAggregatingInNonSyncedCollection : LiteSyncCollectionTests
-        {
-            
-        }
-
-        public class WhenAggregatingInSyncedCollection : LiteSyncCollectionTests
-        {
-
+            this.Db.GetDeletedEntitiesCollection().Insert(new DeletedEntity(CollectionName, new BsonValue(id)));
         }
     }
 }

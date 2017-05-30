@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using LiteDB.Sync.Tests.Tools;
 using NUnit.Framework;
 
@@ -176,7 +174,7 @@ namespace LiteDB.Sync.Tests
             }
         }
 
-        protected void VerifyDeletedEntityExists(BsonValue id, int expectedSequence = 1)
+        protected void VerifyDeletedEntityExists(BsonValue id)
         {
             var deletedEntity = this.Db.GetDeletedEntitiesCollection()
                 .FindOne(x => x.EntityId == id && x.CollectionName == CollectionName);
