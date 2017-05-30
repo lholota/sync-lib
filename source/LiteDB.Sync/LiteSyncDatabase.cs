@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using LiteDB.Sync.Internal;
 
 namespace LiteDB.Sync
 {
     public class LiteSyncDatabase : ILiteDatabase
     {
+        internal const string LocalHeadId = "LocalHead";
+        internal const string SyncStateCollectionName = "LiteSync_State";
+        internal const string DeletedEntitiesCollectionName = "LiteSync_Deleted";
+
         private readonly LiteDatabase db;
         private readonly ILiteSyncService syncService;
 
@@ -83,6 +88,11 @@ namespace LiteDB.Sync
         public void Dispose()
         {
             this.db.Dispose();
+        }
+
+        internal ILiteCollection<DeletedEntity> GetDeletedEntitiesCollection()
+        {
+            return this.db.GetCollection<DeletedEntity>(DeletedEntitiesCollectionName);
         }
 
         private ILiteCollection<T> WrapCollectionIfRequired<T>(string name, ILiteCollection<T> nativeCollection, bool validateType = true)

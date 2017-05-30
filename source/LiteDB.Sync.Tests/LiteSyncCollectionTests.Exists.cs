@@ -1,5 +1,4 @@
-﻿using LiteDB.Sync.Contract;
-using LiteDB.Sync.Tests.Tools;
+﻿using LiteDB.Sync.Tests.Tools;
 using NUnit.Framework;
 
 namespace LiteDB.Sync.Tests
@@ -11,31 +10,31 @@ namespace LiteDB.Sync.Tests
             [Test]
             public void ShouldReturnTrueIfAtLeastOneExists()
             {
-                var entity1 = new TestEntity(1) { SyncState = SyncState.RequiresSyncDeleted };
-                var entity2 = new TestEntity(2) { SyncState = SyncState.RequiresSyncDeleted };
+                var entity1 = new TestEntity(1);
+                var entity2 = new TestEntity(2) { Text = "Hello"};
                 var entity3 = new TestEntity(3);
 
                 this.NativeCollection.Insert(entity1);
                 this.NativeCollection.Insert(entity2);
                 this.NativeCollection.Insert(entity3);
 
-                var exists = this.SyncedCollection.Exists(Query.All());
+                var exists = this.SyncedCollection.Exists(Query.EQ("Text", "Hello"));
 
                 Assert.IsTrue(exists);
             }
 
             [Test]
-            public void ShouldReturnFalseIfAllDeleted()
+            public void ShouldReturnFalseIfNonExists()
             {
-                var entity1 = new TestEntity(1) { SyncState = SyncState.RequiresSyncDeleted };
-                var entity2 = new TestEntity(2) { SyncState = SyncState.RequiresSyncDeleted };
-                var entity3 = new TestEntity(3) { SyncState = SyncState.RequiresSyncDeleted };
+                var entity1 = new TestEntity(1);
+                var entity2 = new TestEntity(2);
+                var entity3 = new TestEntity(3);
 
                 this.NativeCollection.Insert(entity1);
                 this.NativeCollection.Insert(entity2);
                 this.NativeCollection.Insert(entity3);
 
-                var exists = this.SyncedCollection.Exists(Query.All());
+                var exists = this.SyncedCollection.Exists(Query.EQ("Text", "Hello"));
 
                 Assert.IsFalse(exists);
             }
@@ -46,31 +45,31 @@ namespace LiteDB.Sync.Tests
             [Test]
             public void ShouldReturnTrueIfAtLeastOneExists()
             {
-                var entity1 = new TestEntity(1) { SyncState = SyncState.RequiresSyncDeleted };
-                var entity2 = new TestEntity(2) { SyncState = SyncState.RequiresSyncDeleted };
+                var entity1 = new TestEntity(1);
+                var entity2 = new TestEntity(2) { Text = "Hello" };
                 var entity3 = new TestEntity(3);
 
                 this.NativeCollection.Insert(entity1);
                 this.NativeCollection.Insert(entity2);
                 this.NativeCollection.Insert(entity3);
 
-                var exists = this.SyncedCollection.Exists(x => true);
+                var exists = this.SyncedCollection.Exists(x => x.Text == "Hello");
 
                 Assert.IsTrue(exists);
             }
 
             [Test]
-            public void ShouldReturnFalseIfAllDeleted()
+            public void ShouldReturnFalseIfNonExists()
             {
-                var entity1 = new TestEntity(1) { SyncState = SyncState.RequiresSyncDeleted };
-                var entity2 = new TestEntity(2) { SyncState = SyncState.RequiresSyncDeleted };
-                var entity3 = new TestEntity(3) { SyncState = SyncState.RequiresSyncDeleted };
+                var entity1 = new TestEntity(1);
+                var entity2 = new TestEntity(2);
+                var entity3 = new TestEntity(3);
 
                 this.NativeCollection.Insert(entity1);
                 this.NativeCollection.Insert(entity2);
                 this.NativeCollection.Insert(entity3);
 
-                var exists = this.SyncedCollection.Exists(x => true);
+                var exists = this.SyncedCollection.Exists(x => x.Text == "Hello");
 
                 Assert.IsFalse(exists);
             }

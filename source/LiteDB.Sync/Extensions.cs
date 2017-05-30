@@ -8,24 +8,21 @@ namespace LiteDB.Sync
 
     internal static class Extensions
     {
-        private const string LocalHeadId = "LocalHead";
-        private const string SyncStateCollectionName = "LiteSync_State";
-
         internal static IEnumerable<BsonDocument> FindDirtyEntities(this ILiteCollection<BsonDocument> collection)
         {
-            var query = Query.Not(Query.EQ(nameof(ILiteSyncEntity.SyncState), new BsonValue(SyncState.None)));
+            var query = Query.Not(Query.EQ(nameof(ILiteSyncEntity.RequiresSync), new BsonValue(true)));
 
             return collection.Find(query);
-        }
-
-        internal static Head GetSyncHead(this ILiteDatabase db)
-        {
-            return db.GetCollection<Head>(SyncStateCollectionName).FindById(LocalHeadId);
         }
 
         internal static bool IsSyncEntityType(this Type type)
         {
             return typeof(ILiteSyncEntity).IsAssignableFrom(type);
+        }
+
+        internal static Head GetSyncHead(this ILiteDatabase db)
+        {
+            return db.GetCollection<Head>(LiteSyncDatabase.SyncStateCollectionName).FindById(LiteSyncDatabase.LocalHeadId);
         }
     }
 }

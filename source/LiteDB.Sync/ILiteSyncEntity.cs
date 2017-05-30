@@ -2,6 +2,6 @@
 {
     public interface ILiteSyncEntity
     {
-        int SyncState { get; set; }
+        bool RequiresSync { get; set; }
     }
 }

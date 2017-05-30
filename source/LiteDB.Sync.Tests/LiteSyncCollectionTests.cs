@@ -8,6 +8,8 @@ namespace LiteDB.Sync.Tests
     [TestFixture]
     public partial class LiteSyncCollectionTests
     {
+        private const string CollectionName = "Dummy";
+
         protected MemoryStream DbStream;
         protected LiteDatabase InnerDb;
         protected LiteSyncDatabase Db;
@@ -22,14 +24,14 @@ namespace LiteDB.Sync.Tests
             this.InnerDb = new LiteDatabase(this.DbStream);
 
             this.SyncServiceMock = new Mock<ILiteSyncService>();
-            this.SyncServiceMock.Setup(x => x.SyncedCollections).Returns(new[] {"Dummy"});
+            this.SyncServiceMock.Setup(x => x.SyncedCollections).Returns(new[] { CollectionName });
 
             this.Db = new LiteSyncDatabase(this.SyncServiceMock.Object, this.InnerDb);
 
-            this.SyncedCollection = this.Db.GetCollection<TestEntity>("Dummy");
-            this.NativeCollection = this.InnerDb.GetCollection<TestEntity>("Dummy");
+            this.SyncedCollection = this.Db.GetCollection<TestEntity>(CollectionName);
+            this.NativeCollection = this.InnerDb.GetCollection<TestEntity>(CollectionName);
 
-            this.NativeCollection.EnsureIndex(nameof(TestEntity.Text));
+            // this.NativeCollection.EnsureIndex(nameof(TestEntity.Text));
 
             Assert.IsInstanceOf<LiteSyncCollection<TestEntity>>(this.SyncedCollection);
         }

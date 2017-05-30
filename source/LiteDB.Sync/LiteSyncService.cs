@@ -39,7 +39,7 @@ namespace LiteDB.Sync
                 foreach (var collectionName in this.SyncedCollections)
                 {
                     var collection = db.GetCollection(collectionName);
-                    collection.EnsureIndex(nameof(ILiteSyncEntity.SyncState));
+                    collection.EnsureIndex(nameof(ILiteSyncEntity.RequiresSync));
                 }
 
                 tx.Commit();

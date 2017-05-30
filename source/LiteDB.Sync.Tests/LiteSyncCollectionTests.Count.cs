@@ -9,10 +9,10 @@ namespace LiteDB.Sync.Tests
         public class WhenCountingAll : LiteSyncCollectionTests
         {
             [Test]
-            public void ShouldIgnoreSoftDeletedItems()
+            public void ShouldReturnCount()
             {
-                var entity1 = new TestEntity(1) { SyncState = SyncState.RequiresSyncDeleted };
-                var entity2 = new TestEntity(2) { SyncState = SyncState.RequiresSyncDeleted };
+                var entity1 = new TestEntity(1);
+                var entity2 = new TestEntity(2);
                 var entity3 = new TestEntity(3);
 
                 this.NativeCollection.Insert(entity1);
@@ -21,17 +21,17 @@ namespace LiteDB.Sync.Tests
 
                 var count = this.SyncedCollection.Count();
 
-                Assert.AreEqual(1, count);
+                Assert.AreEqual(3, count);
             }
         }
 
         public class WhenLongCountingAll : LiteSyncCollectionTests
         {
             [Test]
-            public void ShouldIgnoreSoftDeletedItems()
+            public void ShouldReturnCount()
             {
-                var entity1 = new TestEntity(1) { SyncState = SyncState.RequiresSyncDeleted };
-                var entity2 = new TestEntity(2) { SyncState = SyncState.RequiresSyncDeleted };
+                var entity1 = new TestEntity(1);
+                var entity2 = new TestEntity(2);
                 var entity3 = new TestEntity(3);
 
                 this.NativeCollection.Insert(entity1);
@@ -40,7 +40,7 @@ namespace LiteDB.Sync.Tests
 
                 var count = this.SyncedCollection.LongCount();
 
-                Assert.AreEqual(1, count);
+                Assert.AreEqual(3, count);
             }
         }
 
@@ -50,7 +50,7 @@ namespace LiteDB.Sync.Tests
             public void ShouldIgnoreSoftDeletedItems()
             {
                 var entity1 = new TestEntity(1);
-                var entity2 = new TestEntity(2) { SyncState = SyncState.RequiresSyncDeleted };
+                var entity2 = new TestEntity(2);
                 var entity3 = new TestEntity(3);
 
                 this.NativeCollection.Insert(entity1);
@@ -59,7 +59,7 @@ namespace LiteDB.Sync.Tests
 
                 var count = this.SyncedCollection.Count(x => x.Id >= 2);
 
-                Assert.AreEqual(1, count);
+                Assert.AreEqual(2, count);
             }
         }
 
@@ -69,7 +69,7 @@ namespace LiteDB.Sync.Tests
             public void ShouldIgnoreSoftDeletedItems()
             {
                 var entity1 = new TestEntity(1);
-                var entity2 = new TestEntity(2) { SyncState = SyncState.RequiresSyncDeleted };
+                var entity2 = new TestEntity(2);
                 var entity3 = new TestEntity(3);
 
                 this.NativeCollection.Insert(entity1);
@@ -78,7 +78,7 @@ namespace LiteDB.Sync.Tests
 
                 var count = this.SyncedCollection.LongCount(x => x.Id >= 2);
 
-                Assert.AreEqual(1, count);
+                Assert.AreEqual(2, count);
             }
         }
 
@@ -88,7 +88,7 @@ namespace LiteDB.Sync.Tests
             public void ShouldIgnoreSoftDeletedItems()
             {
                 var entity1 = new TestEntity(1);
-                var entity2 = new TestEntity(2) { SyncState = SyncState.RequiresSyncDeleted };
+                var entity2 = new TestEntity(2);
                 var entity3 = new TestEntity(3);
 
                 this.NativeCollection.Insert(entity1);
@@ -97,7 +97,7 @@ namespace LiteDB.Sync.Tests
 
                 var count = this.SyncedCollection.Count(Query.GTE("_id", new BsonValue(2)));
 
-                Assert.AreEqual(1, count);
+                Assert.AreEqual(2, count);
             }
         }
 
@@ -107,7 +107,7 @@ namespace LiteDB.Sync.Tests
             public void ShouldIgnoreSoftDeletedItems()
             {
                 var entity1 = new TestEntity(1);
-                var entity2 = new TestEntity(2) { SyncState = SyncState.RequiresSyncDeleted };
+                var entity2 = new TestEntity(2);
                 var entity3 = new TestEntity(3);
 
                 this.NativeCollection.Insert(entity1);
@@ -116,7 +116,7 @@ namespace LiteDB.Sync.Tests
 
                 var count = this.SyncedCollection.LongCount(Query.GTE("_id", new BsonValue(2)));
 
-                Assert.AreEqual(1, count);
+                Assert.AreEqual(2, count);
             }
         }
     }

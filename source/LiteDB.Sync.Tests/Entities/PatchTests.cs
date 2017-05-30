@@ -76,7 +76,7 @@ namespace LiteDB.Sync.Tests.Entities
             [Test]
             public void ShouldNotContainPayloadIfEntityDeleted()
             {
-                var changedEntity = GetDocument(123, 1, syncState:SyncState.RequiresSyncDeleted);
+                var changedEntity = GetDocument(123, 1);
 
                 var patch = new Patch();
                 patch.AddChanges(CollectionName, new []{ changedEntity });
@@ -166,12 +166,13 @@ namespace LiteDB.Sync.Tests.Entities
             }
         }
 
-        protected static BsonDocument GetDocument(int id, int changeTime, string stringPropValue = null, int syncState = SyncState.RequiresSync)
+        protected static BsonDocument GetDocument(int id, int changeTime, string stringPropValue = null, bool requiresSync = true)
         {
             return BsonMapper.Global.ToDocument(new TestEntity
             {
                 Id = id,
-                Text = stringPropValue
+                Text = stringPropValue,
+                RequiresSync = requiresSync
             });
         }
     }
