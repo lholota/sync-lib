@@ -38,54 +38,37 @@ namespace LiteDB.Sync
 
         public int Delete(Query query)
         {
-            if (!typeof(ILiteSyncEntity).IsAssignableFrom(typeof(T)))
-            {
-                return this.UnderlyingCollection.Delete(query);
-            }
-
-            int result;
-
-            using (var tx = this.database.BeginTrans())
-            {
-                result = this.UnderlyingCollection.Delete(query, out IList<BsonValue> deletedIds);
-
-                tx.Commit();
-            }
-
-            return result;
+            return this.BatchDelete(() => this.UnderlyingCollection.Find(query));
         }
 
         public int Delete(Expression<Func<T, bool>> predicate)
         {
-            if (!typeof(ILiteSyncEntity).IsAssignableFrom(typeof(T)))
-            {
-                return this.UnderlyingCollection.Delete(predicate);
-            }
-
-            int result;
-
-            using (var tx = this.database.BeginTrans())
-            {
-                result = this.UnderlyingCollection.Delete(predicate, out IList<BsonValue> deletedIds);
-
-                tx.Commit();
-            }
-
-            return result;
+            return this.BatchDelete(() => this.UnderlyingCollection.Find(predicate));
         }
 
         public bool Delete(BsonValue id)
         {
-            if (!typeof(ILiteSyncEntity).IsAssignableFrom(typeof(T)))
-            {
-                return this.UnderlyingCollection.Delete(id);
-            }
-
             bool result;
 
             using (var tx = this.database.BeginTrans())
             {
-                result = this.UnderlyingCollection.Delete(id);
+                var item = this.UnderlyingCollection.FindById(id);
+
+                if (item == null)
+                {
+                    return false;
+                }
+
+                var syncItem = (ILiteSyncEntity) item;
+
+                if (syncItem.SyncState == EntitySyncState.RequiresSyncDeleted)
+                {
+                    return false;
+                }
+
+                syncItem.SyncState = EntitySyncState.RequiresSyncDeleted;
+
+                result = this.UnderlyingCollection.Update(item);
 
                 tx.Commit();
             }
@@ -279,6 +262,35 @@ namespace LiteDB.Sync
             this.MarkDirty(entities);
 
             return this.UnderlyingCollection.Upsert(entities);
+        }
+
+        private int BatchDelete(Func<IEnumerable<T>> findAllFunc)
+        {
+            int result = 0;
+
+            using (var tx = this.database.BeginTrans())
+            {
+                var toBeDeleted = findAllFunc.Invoke();
+
+                foreach (var item in toBeDeleted)
+                {
+                    var syncItem = (ILiteSyncEntity)item;
+
+                    if (syncItem.SyncState == EntitySyncState.RequiresSyncDeleted)
+                    {
+                        continue;
+                    }
+
+                    syncItem.SyncState = EntitySyncState.RequiresSyncDeleted;
+
+                    this.UnderlyingCollection.Update(item);
+                    result++;
+                }
+
+                tx.Commit();
+            }
+
+            return result;
         }
 
         private void MarkDirty(IEnumerable<T> entities)

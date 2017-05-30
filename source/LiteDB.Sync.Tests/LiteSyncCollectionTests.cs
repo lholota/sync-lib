@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Linq;
 using LiteDB.Sync.Tests.Tools;
 using NUnit.Framework;
 using Moq;
@@ -13,7 +12,7 @@ namespace LiteDB.Sync.Tests
         protected LiteDatabase InnerDb;
         protected LiteSyncDatabase Db;
         protected ILiteCollection<TestEntity> SyncedCollection;
-        protected ILiteCollection<NonSyncedTestEntity> NonSyncedCollection;
+        protected ILiteCollection<TestEntity> NativeCollection;
         protected Mock<ILiteSyncService> SyncServiceMock;
 
         [SetUp]
@@ -21,11 +20,15 @@ namespace LiteDB.Sync.Tests
         {
             this.DbStream = new MemoryStream();
             this.InnerDb = new LiteDatabase(this.DbStream);
+
             this.SyncServiceMock = new Mock<ILiteSyncService>();
+            this.SyncServiceMock.Setup(x => x.SyncedCollections).Returns(new[] {"Dummy"});
 
             this.Db = new LiteSyncDatabase(this.SyncServiceMock.Object, this.InnerDb);
             this.SyncedCollection = this.Db.GetCollection<TestEntity>("Dummy");
-            this.NonSyncedCollection = this.Db.GetCollection<NonSyncedTestEntity>("Dummy");
+            this.NativeCollection = this.InnerDb.GetCollection<TestEntity>("Dummy");
+
+            Assert.IsInstanceOf<LiteSyncCollection<TestEntity>>(this.SyncedCollection);
         }
 
         [TearDown]
