@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
@@ -314,23 +313,78 @@ namespace LiteDB.Sync
 
         public bool Upsert(T entity)
         {
-            this.MarkDirty(entity);
+            bool result;
 
-            return this.UnderlyingCollection.Upsert(entity);
+            using (var tx = this.database.BeginTrans())
+            {
+                this.MarkDirty(entity);
+
+                result = this.UnderlyingCollection.Upsert(entity);
+
+                if (result)
+                {
+                    var id = this.database.Mapper.GetEntityId(entity);
+                    var deletedEntityId = DeletedEntity.CreateId(this.Name, id);
+
+                    this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
+                }
+
+                tx.Commit();
+            }
+
+            return result;
         }
 
         public bool Upsert(BsonValue id, T document)
         {
-            this.MarkDirty(document);
+            bool result;
 
-            return this.UnderlyingCollection.Upsert(id, document);
+            using (var tx = this.database.BeginTrans())
+            {
+                this.MarkDirty(document);
+
+                result = this.UnderlyingCollection.Upsert(id, document);
+
+                if (result)
+                {
+                    var deletedEntityId = DeletedEntity.CreateId(this.Name, id);
+
+                    this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
+                }
+
+                tx.Commit();
+            }
+
+            return result;
         }
 
         public int Upsert(IEnumerable<T> entities)
         {
-            this.MarkDirty(entities);
+            int result;
 
-            return this.UnderlyingCollection.Upsert(entities);
+            using (var tx = this.database.BeginTrans())
+            {
+                this.MarkDirty(entities);
+
+                result = this.UnderlyingCollection.Upsert(entities);
+
+                if (result > 0)
+                {
+                    var deletedEntCollection = this.database.GetDeletedEntitiesCollection();
+
+                    foreach (var entity in entities)
+                    {
+                        var id = this.database.Mapper.GetEntityId(entity);
+                        var deletedEntityId = DeletedEntity.CreateId(this.Name, id);
+
+                        deletedEntCollection.Delete(deletedEntityId);
+                    }
+                }
+
+                tx.Commit();
+            }
+
+            return result;
         }
 
         private void RemoveDeletedEntities(IEnumerable<T> docs)
