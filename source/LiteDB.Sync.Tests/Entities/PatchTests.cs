@@ -1,13 +1,11 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using LiteDB.Sync.Contract;
+using LiteDB.Sync.Internal;
 using LiteDB.Sync.Tests.Tools;
 using NUnit.Framework;
 
 namespace LiteDB.Sync.Tests.Entities
 {
-    // TODO: Change the logic, no deleted entities anymore...
-
     [TestFixture]
     public class PatchTests
     {
@@ -25,32 +23,33 @@ namespace LiteDB.Sync.Tests.Entities
 
                 Assert.IsNotNull(actual);
                 Assert.IsNotNull(actual.Operations);
-                Assert.AreEqual(expected.Operations.Count, actual.Operations.Count);
-                Assert.AreEqual(expected.Operations[0].EntityId, actual.Operations[0].EntityId);
-                Assert.AreEqual(expected.Operations[0].Entity["Text"], actual.Operations[0].Entity["Text"]);
-                Assert.AreEqual(expected.Operations[0].OperationType, actual.Operations[0].OperationType);
+                Assert.AreEqual(expected.Operations.Count(), actual.Operations.Count());
+                Assert.AreEqual(expected.Operations.First().EntityId, actual.Operations.First().EntityId);
+                Assert.AreEqual(expected.Operations.First().Entity["Text"], actual.Operations.First().Entity["Text"]);
+                Assert.AreEqual(expected.Operations.First().OperationType, actual.Operations.First().OperationType);
 
-                Assert.AreEqual(expected.Operations[1].EntityId, actual.Operations[1].EntityId);
-                Assert.AreEqual(expected.Operations[1].OperationType, actual.Operations[1].OperationType);
+                Assert.AreEqual(expected.Operations.Skip(1).First().EntityId, actual.Operations.Skip(1).First().EntityId);
+                Assert.AreEqual(expected.Operations.Skip(1).First().OperationType, actual.Operations.Skip(1).First().OperationType);
             }
 
             private static Patch CreateSamplePatch()
             {
                 var patch = new Patch();
-                patch.Operations = new List<EntityOperation>();
 
-                patch.Operations.Add(new EntityOperation
+                var docs = new[]
                 {
-                    Entity = GetDocument(123, 1),
-                    EntityId = new BsonValue(1),
-                    OperationType = EntityOperationType.Upsert
-                });
+                    GetDocument(123, "AAA")
+                };
 
-                patch.Operations.Add(new EntityOperation
+                patch.AddChanges(CollectionName, docs);
+
+                var deleted = new[]
                 {
-                    EntityId = new BsonValue(2),
-                    OperationType = EntityOperationType.Delete
-                });
+                    new DeletedEntity(CollectionName, 456)
+                };
+
+                patch.AddDeletes(deleted);
+
                 return patch;
             }
         }
@@ -60,14 +59,14 @@ namespace LiteDB.Sync.Tests.Entities
             [Test]
             public void ShouldContainAddedChanges()
             {
-                var document = GetDocument(123, 1);
+                var document = GetDocument(123);
 
                 var patch = new Patch();
                 patch.AddChanges(CollectionName, new[] { document });
 
                 var operation = patch.Operations.Single();
 
-                Assert.AreEqual(123, operation.EntityId);
+                Assert.AreEqual(123, operation.EntityId.AsInt32);
                 Assert.AreEqual(EntityOperationType.Upsert, operation.OperationType);
                 Assert.AreEqual(document, operation.Entity);
                 Assert.AreEqual(CollectionName, operation.CollectionName);
@@ -76,14 +75,14 @@ namespace LiteDB.Sync.Tests.Entities
             [Test]
             public void ShouldNotContainPayloadIfEntityDeleted()
             {
-                var changedEntity = GetDocument(123, 1);
+                var deletedEntity = new DeletedEntity(CollectionName, 123);
 
                 var patch = new Patch();
-                patch.AddChanges(CollectionName, new []{ changedEntity });
+                patch.AddDeletes(new []{ deletedEntity });
 
                 var operation = patch.Operations.Single();
 
-                Assert.AreEqual(123, operation.EntityId);
+                Assert.AreEqual(123, operation.EntityId.AsInt32);
                 Assert.AreEqual(EntityOperationType.Delete, operation.OperationType);
                 Assert.IsNull(operation.Entity);
                 Assert.AreEqual(CollectionName, operation.CollectionName);
@@ -103,12 +102,15 @@ namespace LiteDB.Sync.Tests.Entities
 
                 var combined = Patch.Combine(patches);
 
-                Assert.AreEqual(1, combined.Operations.Count);
-                Assert.AreEqual(EntityOperationType.Upsert, combined.Operations[0].OperationType);
-                Assert.AreEqual(123, combined.Operations[0].EntityId);
+                Assert.AreEqual(1, combined.Operations.Count());
+
+                var operation = combined.Operations.Single();
+
+                Assert.AreEqual(EntityOperationType.Upsert, operation.OperationType);
+                Assert.AreEqual(123, operation.EntityId.AsInt32);
 
                 BsonValue actualStringPropValue;
-                combined.Operations[0].Entity.TryGetValue(nameof(TestEntity.Text), out actualStringPropValue);
+                operation.Entity.TryGetValue(nameof(TestEntity.Text), out actualStringPropValue);
 
                 Assert.IsNotNull(actualStringPropValue);
                 Assert.AreEqual("Value2", actualStringPropValue.ToString());
@@ -125,9 +127,12 @@ namespace LiteDB.Sync.Tests.Entities
 
                 var combined = Patch.Combine(patches);
 
-                Assert.AreEqual(1, combined.Operations.Count);
-                Assert.AreEqual(EntityOperationType.Delete, combined.Operations[0].OperationType);
-                Assert.AreEqual(123, combined.Operations[0].EntityId);
+                Assert.AreEqual(1, combined.Operations.Count());
+
+                var operation = combined.Operations.Single();
+
+                Assert.AreEqual(EntityOperationType.Delete, operation.OperationType);
+                Assert.AreEqual(123, operation.EntityId.AsInt32);
             }
 
             [Test]
@@ -141,32 +146,55 @@ namespace LiteDB.Sync.Tests.Entities
 
                 var combined = Patch.Combine(patches);
 
-                Assert.AreEqual(1, combined.Operations.Count);
-                Assert.AreEqual(EntityOperationType.Upsert, combined.Operations[0].OperationType);
-                Assert.AreEqual(123, combined.Operations[0].EntityId);
+                Assert.AreEqual(1, combined.Operations.Count());
+
+                var operation = combined.Operations.Single();
+
+                Assert.AreEqual(EntityOperationType.Upsert, operation.OperationType);
+                Assert.AreEqual(123, operation.EntityId.AsInt32);
             }
 
-            private Patch CreatePatch(EntityOperationType opType, string stringPropValue = null)
+            [Test]
+            public void ShouldNotMergeSameIdsInDifferentCollections()
+            {
+                var patches = new[]
+                {
+                    this.CreatePatch(EntityOperationType.Upsert, collectionName:CollectionName),
+                    this.CreatePatch(EntityOperationType.Upsert, collectionName:CollectionName + "Another")
+                };
+
+                var combined = Patch.Combine(patches);
+
+                Assert.AreEqual(2, combined.Operations.Count());
+            }
+
+            private Patch CreatePatch(EntityOperationType opType, string stringPropValue = null, string collectionName = null)
             {
                 var result = new Patch();
 
-                result.Operations.Add(new EntityOperation
-                {
-                    EntityId = 123,
-                    CollectionName = CollectionName,
-                    OperationType = opType
-                });
-
                 if (opType == EntityOperationType.Upsert)
                 {
-                    result.Operations[0].Entity = GetDocument(1, 1, stringPropValue);
+                    var entity = new TestEntity(123)
+                    {
+                        Text = stringPropValue
+                    };
+
+                    var bsonDoc = BsonMapper.Global.ToDocument(entity);
+
+                    result.AddChanges(collectionName ?? CollectionName, new []{ bsonDoc });
+                }
+                else
+                {
+                    var deletedEntity = new DeletedEntity(collectionName ?? CollectionName, 123);
+
+                    result.AddDeletes(new []{deletedEntity});
                 }
 
                 return result;
             }
         }
 
-        protected static BsonDocument GetDocument(int id, int changeTime, string stringPropValue = null, bool requiresSync = true)
+        protected static BsonDocument GetDocument(int id, string stringPropValue = null, bool requiresSync = true)
         {
             return BsonMapper.Global.ToDocument(new TestEntity
             {
