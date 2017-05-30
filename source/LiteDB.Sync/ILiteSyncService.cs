@@ -1,4 +1,6 @@
-﻿namespace LiteDB.Sync
+﻿using System.Collections.Generic;
+
+namespace LiteDB.Sync
 {
     using System.Threading.Tasks;
 
@@ -9,5 +11,6 @@
         void StopSyncWorker();
 
         Task SyncNow();
+        IEnumerable<string> SyncedCollections { get; }
     }
 }

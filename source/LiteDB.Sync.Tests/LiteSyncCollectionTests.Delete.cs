@@ -34,55 +34,62 @@ namespace LiteDB.Sync.Tests
 
         public class WhenDeletingItemsByPredicateFromNonSyncedCollection : LiteSyncCollectionTests
         {
-            /*
-             * No items exists -> should return 0
-             * Item exists -> should delete & return count
-             */
-
             [Test]
             public void ShouldDeleteItemsByPredicate()
             {
-                var entity1 = new TestEntity(1);
-                var entity2 = new TestEntity(2);
-                var entity3 = new TestEntity(3);
+                var entity1 = new NonSyncedTestEntity(1);
+                var entity2 = new NonSyncedTestEntity(2);
+                var entity3 = new NonSyncedTestEntity(3);
 
-                this.SyncedCollection.Insert(entity1);
-                this.SyncedCollection.Insert(entity2);
-                this.SyncedCollection.Insert(entity3);
+                this.NonSyncedCollection.Insert(entity1);
+                this.NonSyncedCollection.Insert(entity2);
+                this.NonSyncedCollection.Insert(entity3);
 
                 this.SyncedCollection.Delete(x => x.Id <= 2);
 
-                var found = this.InnerDb.GetCollection<TestEntity>().FindAll().ToArray();
+                var found = this.InnerDb.GetCollection<NonSyncedTestEntity>().FindAll().ToArray();
 
                 Assert.IsNotNull(found);
                 Assert.AreEqual(1, found.Length);
-                Assert.AreEqual(EntitySyncState.None, found[0].SyncState);
+            }
+
+            [Test]
+            public void ShouldReturnZeroWhenCollectionEmpty()
+            {
+                var count = this.SyncedCollection.Delete(x => true);
+
+                Assert.AreEqual(0, count);
             }
         }
 
         public class WhenDeletingItemsByQueryFromNonSyncedCollection : LiteSyncCollectionTests
         {
-            /*
-             * No items exists -> should return 0
-             * Item exists -> should delete & return count
-             */
-
             [Test]
             public void ShouldDeleteItemsByQuery()
             {
-                var entity1 = new TestEntity(1);
-                var entity2 = new TestEntity(2);
+                var entity1 = new NonSyncedTestEntity(1);
+                var entity2 = new NonSyncedTestEntity(2);
+                var entity3 = new NonSyncedTestEntity(3);
 
-                this.SyncedCollection.Insert(entity1);
-                this.SyncedCollection.Insert(entity2);
+                this.NonSyncedCollection.Insert(entity1);
+                this.NonSyncedCollection.Insert(entity2);
+                this.NonSyncedCollection.Insert(entity3);
 
-                this.SyncedCollection.Delete(Query.LTE(nameof(TestEntity.Id), new BsonValue(2)));
+                this.NonSyncedCollection.Delete(Query.LTE(nameof(TestEntity.Id), new BsonValue(2)));
 
-                var found = this.InnerDb.GetCollection<TestEntity>().FindAll().ToArray();
+                var found = this.InnerDb.GetCollection<NonSyncedTestEntity>().FindAll().ToArray();
 
                 Assert.IsNotNull(found);
                 Assert.AreEqual(1, found.Length);
-                Assert.AreEqual(EntitySyncState.None, found[0].SyncState);
+                Assert.AreEqual(3, found[0].Id);
+            }
+
+            [Test]
+            public void ShouldReturnZeroWhenCollectionEmpty()
+            {
+                var count = this.NonSyncedCollection.Delete(Query.LTE(nameof(TestEntity.Id), new BsonValue(1000)));
+
+                Assert.AreEqual(0, count);
             }
         }
 

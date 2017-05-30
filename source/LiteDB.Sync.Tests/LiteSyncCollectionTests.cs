@@ -13,7 +13,7 @@ namespace LiteDB.Sync.Tests
         protected LiteDatabase InnerDb;
         protected LiteSyncDatabase Db;
         protected ILiteCollection<TestEntity> SyncedCollection;
-        protected ILiteCollection<TestEntity> NonSyncedCollection;
+        protected ILiteCollection<NonSyncedTestEntity> NonSyncedCollection;
         protected Mock<ILiteSyncService> SyncServiceMock;
 
         [SetUp]
@@ -24,8 +24,8 @@ namespace LiteDB.Sync.Tests
             this.SyncServiceMock = new Mock<ILiteSyncService>();
 
             this.Db = new LiteSyncDatabase(this.SyncServiceMock.Object, this.InnerDb);
-            this.SyncedCollection = this.Db.GetCollection<TestEntity>("Synced");
-            this.NonSyncedCollection = this.Db.GetCollection<TestEntity>("NonSynced");
+            this.SyncedCollection = this.Db.GetCollection<TestEntity>("Dummy");
+            this.NonSyncedCollection = this.Db.GetCollection<NonSyncedTestEntity>("Dummy");
         }
 
         [TearDown]

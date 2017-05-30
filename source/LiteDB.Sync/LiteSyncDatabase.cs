@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace LiteDB.Sync
 {
@@ -28,17 +30,24 @@ namespace LiteDB.Sync
 
         public ILiteCollection<T> GetCollection<T>(string name)
         {
-            return new LiteSyncCollection<T>(this.db.GetCollection<T>(name), this);
+            var nativeCollection = this.db.GetCollection<T>(name);
+
+            return this.WrapCollectionIfRequired<T>(name, nativeCollection);
         }
 
         public ILiteCollection<T> GetCollection<T>()
         {
-            return new LiteSyncCollection<T>(this.db.GetCollection<T>(), this);
+            var nativeCollection = this.db.GetCollection<T>();
+            var name = BsonMapper.Global.ResolveCollectionName.Invoke(typeof(T));
+
+            return this.WrapCollectionIfRequired(name, nativeCollection);
         }
 
         public ILiteCollection<BsonDocument> GetCollection(string name)
         {
-            return new LiteSyncCollection<BsonDocument>(this.db.GetCollection(name), this);
+            var nativeCollection = this.db.GetCollection(name);
+
+            return this.WrapCollectionIfRequired(name, nativeCollection, false);
         }
 
         public IEnumerable<string> GetCollectionNames()
@@ -74,6 +83,21 @@ namespace LiteDB.Sync
         public void Dispose()
         {
             this.db.Dispose();
+        }
+
+        private ILiteCollection<T> WrapCollectionIfRequired<T>(string name, ILiteCollection<T> nativeCollection, bool validateType = true)
+        {
+            if (this.syncService.SyncedCollections.Contains(name, StringComparer.OrdinalIgnoreCase))
+            {
+                if (validateType && !typeof(T).IsSyncEntityType())
+                {
+                    throw LiteSyncException.EntityDoesntImplementInterface(typeof(T));
+                }
+
+                return new LiteSyncCollection<T>(nativeCollection, this);
+            }
+
+            return nativeCollection;
         }
     }
 }

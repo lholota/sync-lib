@@ -1,4 +1,6 @@
-﻿using LiteDB.Sync.Contract;
+﻿using System;
+using System.Reflection;
+using LiteDB.Sync.Contract;
 
 namespace LiteDB.Sync
 {
@@ -19,6 +21,11 @@ namespace LiteDB.Sync
         internal static Head GetSyncHead(this ILiteDatabase db)
         {
             return db.GetCollection<Head>(SyncStateCollectionName).FindById(LocalHeadId);
+        }
+
+        internal static bool IsSyncEntityType(this Type type)
+        {
+            return typeof(ILiteSyncEntity).IsAssignableFrom(type);
         }
     }
 }
