@@ -1,4 +1,5 @@
 ﻿using System;
+using LiteDB.Sync.Contract;
 
 namespace LiteDB.Sync
 {
@@ -6,7 +7,8 @@ namespace LiteDB.Sync
     {
         public static class ErrorCodes
         {
-            public const int EntityDoesntImplementInterface = 1;
+            public const int EntityDoesntImplementInterfaceErrorCode = 1;
+            public const int ConflictNotResolvedErrorCode = 2;
         }
 
         internal static LiteSyncException EntityDoesntImplementInterface(Type type)
@@ -15,7 +17,15 @@ namespace LiteDB.Sync
                                         "Only objects implementing this interface can be stored in a synced collection.",
                                         type, nameof(ILiteSyncEntity));
 
-            return new LiteSyncException(ErrorCodes.EntityDoesntImplementInterface, message);
+            return new LiteSyncException(ErrorCodes.EntityDoesntImplementInterfaceErrorCode, message);
+        }
+
+        internal static LiteSyncException ConflictNotResolved(GlobalEntityId globalId)
+        {
+            var message = string.Format("The conflict for the entity with Id {0} in the collection {2} was not resolved.",
+                globalId.EntityId, globalId.CollectionName);
+
+            return new LiteSyncException(ErrorCodes.ConflictNotResolvedErrorCode, message);
         }
 
         private LiteSyncException(int errorCode, string message)

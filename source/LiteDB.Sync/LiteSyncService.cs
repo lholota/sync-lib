@@ -1,44 +1,36 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
-using LiteDB.Sync.Contract;
 
 namespace LiteDB.Sync
 {
-    using System.Collections.Generic;
-
-    public class LiteSyncService : ILiteSyncService
+    public class LiteSyncService
     {
-        private readonly Func<FileMode, LiteDatabase> dbFactoryFunc;
+        private Task syncInProgressTask;
+        private CancellationTokenSource syncInProgressTokenSource;
 
-        public LiteSyncService(ILiteSyncCloudProvider cloudProvider, Func<FileMode, LiteDatabase> dbFactoryFunc, IEnumerable<string> syncedCollections)
+        private readonly object syncControlLock = new object();
+        private readonly LiteDatabase innerDb;
+        private readonly LiteSyncConfiguration config;
+
+        protected LiteSyncService(LiteDatabase innerDb, LiteSyncConfiguration config)
         {
-            this.CloudStorageProvider = cloudProvider;
-            this.SyncedCollections = syncedCollections;
-            this.dbFactoryFunc = dbFactoryFunc;
+            this.innerDb = innerDb;
+            this.config = config;
         }
 
-        public IEnumerable<string> SyncedCollections { get; }
-
-        public ILiteSyncCloudProvider CloudStorageProvider { get; }
-
-        public void StartSyncWorker()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public void StopSyncWorker()
-        {
-            throw new System.NotImplementedException();
-        }
+        public event EventHandler SyncStarted;
+        //public event EventHandler SyncProgressChanged;
+        //public event EventHandler SyncProgressFinished;
+        //public event EventHandler SyncFailed;
 
         public void EnsureIndices()
         {
-            using (var db = this.dbFactoryFunc.Invoke(FileMode.Exclusive))
-            using (var tx = db.BeginTrans())
+            using (var tx = this.innerDb.BeginTrans())
             {
-                foreach (var collectionName in this.SyncedCollections)
+                foreach (var collectionName in this.config.SyncedCollections)
                 {
-                    var collection = db.GetCollection(collectionName);
+                    var collection = this.innerDb.GetCollection(collectionName);
                     collection.EnsureIndex(nameof(ILiteSyncEntity.RequiresSync));
                 }
 
@@ -46,44 +38,35 @@ namespace LiteDB.Sync
             }
         }
 
-        public Task SyncNow()
+        public Task Synchronize(bool forceRestart)
         {
-            using (var db = this.dbFactoryFunc.Invoke(FileMode.Exclusive))
+            lock (this.syncControlLock)
             {
-                using (var tx = db.BeginTrans())
+                if (this.syncInProgressTask != null)
                 {
-                    var localHead = db.GetSyncHead();
-
-                    var remoteChanges = this.CloudStorageProvider.Pull(localHead.TransactionId);
-                    var localChanges = this.GetLocalChanges(db);
-
-                    /*
-                     * Get state
-                     * Pull remote changes
-                     * Flatten the remote changes
-                     * Check local changes (need them for conflict detection...)
-                     * Apply changes, resolve conflicts if they happen
-                     * Push local changes + resolutions to the cloud
-                     */
-
-                    throw new System.NotImplementedException();
+                    if (forceRestart)
+                    {
+                        this.syncInProgressTokenSource.Cancel();
+                        this.syncInProgressTask.Wait();
+                    }
+                    else
+                    {
+                        return Task.FromResult(0);
+                    }
                 }
+
+                this.syncInProgressTokenSource = new CancellationTokenSource();
+                var ctx = new LiteSynchronizer(this.innerDb, this.config);
+
+                this.syncInProgressTask = ctx.Synchronize(this.syncInProgressTokenSource.Token);
+
+                return this.syncInProgressTask;
             }
         }
 
-        private Patch GetLocalChanges(LiteDatabase db)
+        protected virtual void OnSyncStarted()
         {
-            var pushTransaction = new Patch();
-
-            foreach (var collectionName in this.SyncedCollections)
-            {
-                var collection = db.GetCollection(collectionName);
-                var dirtyEntities = collection.FindDirtyEntities();
-
-                pushTransaction.AddChanges(collectionName, dirtyEntities);
-            }
-
-            return pushTransaction;
+            this.SyncStarted?.Invoke(this, EventArgs.Empty);
         }
     }
 }

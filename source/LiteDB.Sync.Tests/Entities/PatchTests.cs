@@ -22,14 +22,21 @@ namespace LiteDB.Sync.Tests.Entities
                 var actual = BsonMapper.Global.ToObject<Patch>(serialized);
 
                 Assert.IsNotNull(actual);
-                Assert.IsNotNull(actual.Operations);
-                Assert.AreEqual(expected.Operations.Count(), actual.Operations.Count());
-                Assert.AreEqual(expected.Operations.First().EntityId, actual.Operations.First().EntityId);
-                Assert.AreEqual(expected.Operations.First().Entity["Text"], actual.Operations.First().Entity["Text"]);
-                Assert.AreEqual(expected.Operations.First().OperationType, actual.Operations.First().OperationType);
+                Assert.IsNotNull(actual.Changes);
+                Assert.AreEqual(expected.Changes.Count, actual.Changes.Count);
 
-                Assert.AreEqual(expected.Operations.Skip(1).First().EntityId, actual.Operations.Skip(1).First().EntityId);
-                Assert.AreEqual(expected.Operations.Skip(1).First().OperationType, actual.Operations.Skip(1).First().OperationType);
+                var firstExpected = expected.Changes.First();
+                var firstActual = actual.Changes.First();
+
+                Assert.AreEqual(firstExpected.Key.EntityId, firstActual.Key.EntityId);
+                Assert.AreEqual(firstExpected.Value.Entity["Text"], firstActual.Value.Entity["Text"]);
+                Assert.AreEqual(firstExpected.Value.ChangeType, firstActual.Value.ChangeType);
+
+                var secondExpected = expected.Changes.Skip(1).First();
+                var secondActual = actual.Changes.Skip(1).First();
+
+                Assert.AreEqual(secondExpected.Key.EntityId, secondActual.Key.EntityId);
+                Assert.AreEqual(secondExpected.Value.ChangeType, secondActual.Value.ChangeType);
             }
 
             private static Patch CreateSamplePatch()
@@ -64,28 +71,29 @@ namespace LiteDB.Sync.Tests.Entities
                 var patch = new Patch();
                 patch.AddChanges(CollectionName, new[] { document });
 
-                var operation = patch.Operations.Single();
+                var operation = patch.Changes.Single();
 
-                Assert.AreEqual(123, operation.EntityId.AsInt32);
-                Assert.AreEqual(EntityOperationType.Upsert, operation.OperationType);
-                Assert.AreEqual(document, operation.Entity);
-                Assert.AreEqual(CollectionName, operation.CollectionName);
+                Assert.AreEqual(123, operation.Key.EntityId.AsInt32);
+                Assert.AreEqual(CollectionName, operation.Key.CollectionName);
+
+                Assert.AreEqual(EntityChangeType.Upsert, operation.Value.ChangeType);
+                Assert.AreEqual(document, operation.Value.Entity);
             }
 
             [Test]
-            public void ShouldNotContainPayloadIfEntityDeleted()
+            public void ShouldContainAddedDeletes()
             {
                 var deletedEntity = new DeletedEntity(CollectionName, 123);
 
                 var patch = new Patch();
                 patch.AddDeletes(new []{ deletedEntity });
 
-                var operation = patch.Operations.Single();
+                var operation = patch.Changes.Single();
 
-                Assert.AreEqual(123, operation.EntityId.AsInt32);
-                Assert.AreEqual(EntityOperationType.Delete, operation.OperationType);
-                Assert.IsNull(operation.Entity);
-                Assert.AreEqual(CollectionName, operation.CollectionName);
+                Assert.AreEqual(123, operation.Key.EntityId.AsInt32);
+                Assert.AreEqual(EntityChangeType.Delete, operation.Value.ChangeType);
+                Assert.IsNull(operation.Value.Entity);
+                Assert.AreEqual(CollectionName, operation.Key.CollectionName);
             }
         }
 
@@ -96,17 +104,17 @@ namespace LiteDB.Sync.Tests.Entities
             {
                 var patches = new[]
                 {
-                    this.CreatePatch(EntityOperationType.Upsert, "Value1"),
-                    this.CreatePatch(EntityOperationType.Upsert, "Value2")
+                    this.CreatePatch(EntityChangeType.Upsert, "Value1"),
+                    this.CreatePatch(EntityChangeType.Upsert, "Value2")
                 };
 
                 var combined = Patch.Combine(patches);
 
-                Assert.AreEqual(1, combined.Operations.Count());
+                Assert.AreEqual(1, combined.Changes.Count());
 
-                var operation = combined.Operations.Single();
+                var operation = combined.Changes.Single();
 
-                Assert.AreEqual(EntityOperationType.Upsert, operation.OperationType);
+                Assert.AreEqual(EntityChangeType.Upsert, operation.OperationType);
                 Assert.AreEqual(123, operation.EntityId.AsInt32);
 
                 BsonValue actualStringPropValue;
@@ -121,17 +129,17 @@ namespace LiteDB.Sync.Tests.Entities
             {
                 var patches = new[]
                 {
-                    this.CreatePatch(EntityOperationType.Upsert),
-                    this.CreatePatch(EntityOperationType.Delete)
+                    this.CreatePatch(EntityChangeType.Upsert),
+                    this.CreatePatch(EntityChangeType.Delete)
                 };
 
                 var combined = Patch.Combine(patches);
 
-                Assert.AreEqual(1, combined.Operations.Count());
+                Assert.AreEqual(1, combined.Changes.Count());
 
-                var operation = combined.Operations.Single();
+                var operation = combined.Changes.Single();
 
-                Assert.AreEqual(EntityOperationType.Delete, operation.OperationType);
+                Assert.AreEqual(EntityChangeType.Delete, operation.OperationType);
                 Assert.AreEqual(123, operation.EntityId.AsInt32);
             }
 
@@ -140,17 +148,17 @@ namespace LiteDB.Sync.Tests.Entities
             {
                 var patches = new[]
                 {
-                    this.CreatePatch(EntityOperationType.Delete),
-                    this.CreatePatch(EntityOperationType.Upsert)
+                    this.CreatePatch(EntityChangeType.Delete),
+                    this.CreatePatch(EntityChangeType.Upsert)
                 };
 
                 var combined = Patch.Combine(patches);
 
-                Assert.AreEqual(1, combined.Operations.Count());
+                Assert.AreEqual(1, combined.Changes.Count());
 
-                var operation = combined.Operations.Single();
+                var operation = combined.Changes.Single();
 
-                Assert.AreEqual(EntityOperationType.Upsert, operation.OperationType);
+                Assert.AreEqual(EntityChangeType.Upsert, operation.OperationType);
                 Assert.AreEqual(123, operation.EntityId.AsInt32);
             }
 
@@ -159,20 +167,20 @@ namespace LiteDB.Sync.Tests.Entities
             {
                 var patches = new[]
                 {
-                    this.CreatePatch(EntityOperationType.Upsert, collectionName:CollectionName),
-                    this.CreatePatch(EntityOperationType.Upsert, collectionName:CollectionName + "Another")
+                    this.CreatePatch(EntityChangeType.Upsert, collectionName:CollectionName),
+                    this.CreatePatch(EntityChangeType.Upsert, collectionName:CollectionName + "Another")
                 };
 
                 var combined = Patch.Combine(patches);
 
-                Assert.AreEqual(2, combined.Operations.Count());
+                Assert.AreEqual(2, combined.Changes.Count());
             }
 
-            private Patch CreatePatch(EntityOperationType opType, string stringPropValue = null, string collectionName = null)
+            private Patch CreatePatch(EntityChangeType opType, string stringPropValue = null, string collectionName = null)
             {
                 var result = new Patch();
 
-                if (opType == EntityOperationType.Upsert)
+                if (opType == EntityChangeType.Upsert)
                 {
                     var entity = new TestEntity(123)
                     {

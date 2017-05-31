@@ -62,7 +62,7 @@ namespace LiteDB.Sync.Tests
 
                 var ex = Assert.Throws<LiteSyncException>(() => this.Db.GetCollection<NonSyncedTestEntity>("Dummy"));
 
-                Assert.AreEqual(LiteSyncException.ErrorCodes.EntityDoesntImplementInterface, ex.ErrorCode);
+                Assert.AreEqual(LiteSyncException.ErrorCodes.EntityDoesntImplementInterfaceErrorCode, ex.ErrorCode);
             }
         }
 
@@ -95,7 +95,7 @@ namespace LiteDB.Sync.Tests
 
                 var ex = Assert.Throws<LiteSyncException>(() => this.Db.GetCollection<NonSyncedTestEntity>());
 
-                Assert.AreEqual(LiteSyncException.ErrorCodes.EntityDoesntImplementInterface, ex.ErrorCode);
+                Assert.AreEqual(LiteSyncException.ErrorCodes.EntityDoesntImplementInterfaceErrorCode, ex.ErrorCode);
             }
         }
 

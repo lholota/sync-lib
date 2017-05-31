@@ -1,4 +1,5 @@
-﻿using LiteDB.Sync.Contract;
+﻿using System.Threading;
+using LiteDB.Sync.Contract;
 
 namespace LiteDB.Sync
 {
@@ -8,8 +9,8 @@ namespace LiteDB.Sync
 
     public interface ILiteSyncCloudProvider
     {
-        Task<IList<Patch>> Pull(Guid localHeadId);
+        Task<IList<Patch>> Pull(Guid? localHeadId, CancellationToken ct);
 
-        Task Push(Patch args);
+        Task Push(Patch args, CancellationToken ct);
     }
 }

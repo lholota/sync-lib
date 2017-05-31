@@ -1,6 +1,6 @@
 namespace LiteDB.Sync.Contract
 {
-    public enum EntityOperationType
+    public enum EntityChangeType
     {
         Delete,
         Upsert

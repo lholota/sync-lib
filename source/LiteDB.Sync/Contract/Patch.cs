@@ -1,68 +1,110 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using LiteDB.Sync.Internal;
 
 namespace LiteDB.Sync.Contract
 {
-    public class Patch
+    public class Patch : IEnumerable<EntityChange>
     {
+        #region Static
+
         public static Patch Combine(IList<Patch> patches)
         {
-            var operations = new Dictionary<BsonValue, EntityOperation>();
+            var resultChanges = new Dictionary<GlobalEntityId, EntityChange>();
 
             foreach (var patch in patches)
             {
-                foreach (var operation in patch.operations)
+                foreach (var operation in patch)
                 {
-                    operations[operation.MergeId] = operation;
+                    resultChanges[operation.GlobalEntityId] = operation;
                 }
             }
 
-            var opList = operations.Select(x => x.Value).ToList();
-            return new Patch(opList);
+            return new Patch(resultChanges);
         }
 
-        private List<EntityOperation> operations;
-
-        public Patch()
+        public static IList<LiteSyncConflict> GetConflicts(Patch localChanges, Patch remoteChanges)
         {
-            this.operations = new List<EntityOperation>();
+            var conflictingIds = localChanges.changes.Keys
+                .Intersect(remoteChanges.changes.Keys)
+                .ToArray();
+
+            return conflictingIds
+                .Select(x => new LiteSyncConflict(localChanges.changes[x], remoteChanges.changes[x]))
+                .ToArray();
         }
 
-        private Patch(List<EntityOperation> operations)
+        #endregion
+
+        private readonly Dictionary<GlobalEntityId, EntityChange> changes;
+
+        public Patch(IEnumerable<EntityChange> initialChanges)
         {
-            this.operations = operations;
+            this.changes = initialChanges.ToDictionary(
+                x => x.GlobalEntityId,
+                x => x);
         }
 
-        public IEnumerable<EntityOperation> Operations
+        internal Patch()
         {
-            get => this.operations;
-            set => this.operations = value.ToList();
+            this.changes = new Dictionary<GlobalEntityId, EntityChange>();
+        }
+
+        private Patch(Dictionary<GlobalEntityId, EntityChange> initialChanges)
+        {
+            this.changes = initialChanges;
+        }
+
+        public bool HasChanges => this.changes.Count > 0;
+
+        public IEnumerator<EntityChange> GetEnumerator()
+        {
+            return this.changes.Select(x => x.Value).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return this.GetEnumerator();
+        }
+
+        internal void RemoveChange(GlobalEntityId id)
+        {
+            this.changes.Remove(id);
+        }
+
+        internal void ReplaceEntity(GlobalEntityId id, BsonDocument doc)
+        {
+            this.changes[id].Entity = doc;
         }
 
         internal void AddChanges(string collectionName, IEnumerable<BsonDocument> dirtyEntities)
         {
-            var changeOperations = dirtyEntities.Select(x => new EntityOperation
+            if (dirtyEntities == null)
             {
-                OperationType = EntityOperationType.Upsert,
-                CollectionName = collectionName,
-                EntityId = x["_id"],
-                Entity = x
-            });
+                throw new ArgumentNullException(nameof(dirtyEntities));
+            }
 
-            this.operations.AddRange(changeOperations);
+            foreach (var bsonDoc in dirtyEntities)
+            {
+                var change = new EntityChange(collectionName, bsonDoc["_id"], EntityChangeType.Upsert, bsonDoc);
+                this.changes.Add(change.GlobalEntityId, change);
+            }
         }
 
         internal void AddDeletes(IEnumerable<DeletedEntity> deletedEntities)
         {
-            var changeOperations = deletedEntities.Select(x => new EntityOperation
+            if (deletedEntities == null)
             {
-                OperationType = EntityOperationType.Delete,
-                CollectionName = x.CollectionName,
-                EntityId = x.EntityId
-            });
+                throw new ArgumentNullException(nameof(deletedEntities));
+            }
 
-            this.operations.AddRange(changeOperations);
+            foreach (var deleted in deletedEntities)
+            {
+                var change = new EntityChange(deleted.CollectionName, deleted.EntityId, EntityChangeType.Delete, null);
+                this.changes.Add(change.GlobalEntityId, change);
+            }
         }
     }
 }
