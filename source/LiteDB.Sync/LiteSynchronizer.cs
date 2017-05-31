@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB.Sync.Contract;
@@ -23,26 +24,25 @@ namespace LiteDB.Sync
             var localHead = this.db.GetSyncHead();
             ct.ThrowIfCancellationRequested();
 
-            // TODO: Pull result should contain remote head etag or version number depending on the provider
-            var remoteChanges = await this.config.CloudProvider.Pull(localHead?.PatchId, ct);
+            var pull = await this.config.CloudProvider.Pull(localHead?.PatchId, ct);
 
             using (this.db.Engine.Locker.Exclusive())
             {
                 var localChanges = this.GetLocalChanges(ct);
-                var remoteCombined = Patch.Combine(remoteChanges);
 
-                if (!this.HasChanges(remoteChanges) && !localChanges.HasChanges)
+                if (!pull.RemoteChanges.HasChanges && !localChanges.HasChanges)
                 {
                     return;
                 }
 
-                this.ResolveConflicts(localChanges, remoteCombined, ct);
+                this.ResolveConflicts(localChanges, pull.RemoteChanges, ct);
 
                 using (var tx = this.db.BeginTrans())
                 {
-                    this.ApplyChangesToLocalDb(remoteCombined);
+                    this.ApplyChangesToLocalDb(pull.RemoteChanges);
 
-                    await this.config.CloudProvider.Push(localChanges, ct);
+                    // new head identifier should be generated -> create a push request which would create the file payloads etc. automatically?
+                    await this.config.CloudProvider.Push(localChanges, pull.Etag, ct);
 
                     tx.Commit();
                 }
@@ -51,19 +51,16 @@ namespace LiteDB.Sync
 
         private void ApplyChangesToLocalDb(Patch remoteChanges)
         {
-            var collections = new Dictionary<string, ILiteCollection<BsonDocument>>();
+            var groupped = remoteChanges.GroupBy(x => x.GlobalId.CollectionName, x => x);
 
-            foreach (var change in remoteChanges)
+            foreach (var group in groupped)
             {
-                if (!collections.TryGetValue(change.GlobalEntityId.CollectionName,
-                                             out ILiteCollection<BsonDocument> collection))
-                {
-                    collection = this.db.GetCollection(change.GlobalEntityId.CollectionName);
-                    collections.Add(change.GlobalEntityId.CollectionName, collection);
-                }
+                var collection = this.db.GetCollection(group.Key);
 
-                // collection.Apply(change);
-                throw new NotImplementedException();
+                foreach (var change in group)
+                {
+                    change.Apply(collection);
+                }
             }
         }
 
@@ -81,7 +78,7 @@ namespace LiteDB.Sync
                 switch (conflict.Resolution)
                 {
                     case ConflictResolution.None:
-                        throw LiteSyncException.ConflictNotResolved(conflict.LocalChange.GlobalEntityId);
+                        throw LiteSyncException.ConflictNotResolved(conflict.LocalChange.GlobalId);
 
                     case ConflictResolution.KeepLocal:
                         remoteChanges.RemoveChange(conflict.EntityId);
@@ -97,11 +94,6 @@ namespace LiteDB.Sync
                         break;
                 }
             }
-        }
-
-        private bool HasChanges(IList<Patch> patches)
-        {
-            return patches != null && patches.Count > 0;
         }
 
         private Patch GetLocalChanges(CancellationToken ct)

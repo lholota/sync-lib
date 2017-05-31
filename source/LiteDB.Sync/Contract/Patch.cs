@@ -18,7 +18,7 @@ namespace LiteDB.Sync.Contract
             {
                 foreach (var operation in patch)
                 {
-                    resultChanges[operation.GlobalEntityId] = operation;
+                    resultChanges[operation.GlobalId] = operation;
                 }
             }
 
@@ -43,7 +43,7 @@ namespace LiteDB.Sync.Contract
         public Patch(IEnumerable<EntityChange> initialChanges)
         {
             this.changes = initialChanges.ToDictionary(
-                x => x.GlobalEntityId,
+                x => x.GlobalId,
                 x => x);
         }
 
@@ -89,7 +89,7 @@ namespace LiteDB.Sync.Contract
             foreach (var bsonDoc in dirtyEntities)
             {
                 var change = new EntityChange(collectionName, bsonDoc["_id"], EntityChangeType.Upsert, bsonDoc);
-                this.changes.Add(change.GlobalEntityId, change);
+                this.changes.Add(change.GlobalId, change);
             }
         }
 
@@ -103,7 +103,7 @@ namespace LiteDB.Sync.Contract
             foreach (var deleted in deletedEntities)
             {
                 var change = new EntityChange(deleted.CollectionName, deleted.EntityId, EntityChangeType.Delete, null);
-                this.changes.Add(change.GlobalEntityId, change);
+                this.changes.Add(change.GlobalId, change);
             }
         }
     }

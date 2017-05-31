@@ -1,16 +1,14 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using LiteDB.Sync.Contract;
 
 namespace LiteDB.Sync
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Threading.Tasks;
-
     public interface ILiteSyncCloudProvider
     {
-        Task<IList<Patch>> Pull(Guid? localHeadId, CancellationToken ct);
+        Task<LiteSyncPullResult> Pull(Guid? localHeadId, CancellationToken ct);
 
-        Task Push(Patch args, CancellationToken ct);
+        Task Push(Patch args, object pullEtag, CancellationToken ct);
     }
 }

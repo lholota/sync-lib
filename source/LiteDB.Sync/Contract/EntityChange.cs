@@ -11,15 +11,27 @@ namespace LiteDB.Sync.Contract
                 throw new ArgumentNullException(nameof(entity), "Entity cannot be null if the change type is Upsert.");
             }
 
-            this.GlobalEntityId = new GlobalEntityId(collectionName, id);
+            this.GlobalId = new GlobalEntityId(collectionName, id);
             this.ChangeType = changeType;
             this.Entity = entity;
         }
 
-        internal GlobalEntityId GlobalEntityId { get; }
+        internal GlobalEntityId GlobalId { get; }
 
         public EntityChangeType ChangeType { get; }
 
         public BsonDocument Entity { get; internal set; }
+
+        internal void Apply(ILiteCollection<BsonDocument> collection)
+        {
+            if (this.ChangeType == EntityChangeType.Delete)
+            {
+                collection.Delete(this.GlobalId.EntityId);
+            }
+            else
+            {
+                collection.Upsert(this.GlobalId.EntityId, this.Entity);
+            }
+        }
     }
 }
