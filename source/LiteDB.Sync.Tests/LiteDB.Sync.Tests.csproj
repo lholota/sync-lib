@@ -10,6 +10,7 @@
     <PackageReference Include="NUnit" Version="3.6.1" />
     <PackageReference Include="NUnit.ConsoleRunner" Version="3.6.1" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.8.0-alpha1" />
+    <PackageReference Include="OpenCover" Version="4.6.519" />
     <PackageReference Include="System.Reflection" Version="4.3.0" />
     <PackageReference Include="System.Reflection.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Reflection.Primitives" Version="4.3.0" />
