@@ -1,10 +1,10 @@
 ﻿using System.IO;
 using LiteDB.Sync.Exceptions;
-using LiteDB.Sync.Tests.Tools;
+using LiteDB.Sync.Tests.TestUtils;
 using Moq;
 using NUnit.Framework;
 
-namespace LiteDB.Sync.Tests
+namespace LiteDB.Sync.Tests.Unit.LiteSyncCollection
 {
     [TestFixture]
     public class LiteSyncDatabaseTests
@@ -61,9 +61,7 @@ namespace LiteDB.Sync.Tests
             {
                 this.SyncServiceMock.SetupGet(x => x.SyncedCollections).Returns(new[] { "Dummy" });
 
-                var ex = Assert.Throws<LiteSyncException>(() => this.Db.GetCollection<NonSyncedTestEntity>("Dummy"));
-
-                Assert.AreEqual(LiteSyncException.ErrorCodes.EntityDoesntImplementInterfaceErrorCode, ex.ErrorCode);
+                Assert.Throws<LiteSyncInvalidEntityException>(() => this.Db.GetCollection<NonSyncableTestEntity>("Dummy"));
             }
         }
 
@@ -92,11 +90,9 @@ namespace LiteDB.Sync.Tests
             [Test]
             public void ShouldThrowWhenGettingNonSyncedEntityTypeOnSyncedCollection()
             {
-                this.SyncServiceMock.SetupGet(x => x.SyncedCollections).Returns(new[] { nameof(NonSyncedTestEntity) });
+                this.SyncServiceMock.SetupGet(x => x.SyncedCollections).Returns(new[] { nameof(NonSyncableTestEntity) });
 
-                var ex = Assert.Throws<LiteSyncException>(() => this.Db.GetCollection<NonSyncedTestEntity>());
-
-                Assert.AreEqual(LiteSyncException.ErrorCodes.EntityDoesntImplementInterfaceErrorCode, ex.ErrorCode);
+                Assert.Throws<LiteSyncInvalidEntityException>(() => this.Db.GetCollection<NonSyncableTestEntity>());
             }
         }
 

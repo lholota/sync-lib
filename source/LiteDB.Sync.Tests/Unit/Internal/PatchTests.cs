@@ -1,9 +1,9 @@
 ﻿using System.Linq;
 using LiteDB.Sync.Internal;
-using LiteDB.Sync.Tests.Tools;
+using LiteDB.Sync.Tests.TestUtils;
 using NUnit.Framework;
 
-namespace LiteDB.Sync.Tests.Entities
+namespace LiteDB.Sync.Tests.Unit.Internal
 {
     [TestFixture]
     public class PatchTests
@@ -21,21 +21,24 @@ namespace LiteDB.Sync.Tests.Entities
                 var actual = BsonMapper.Global.ToObject<Patch>(serialized);
 
                 Assert.IsNotNull(actual);
-                Assert.IsNotNull(actual.Changes);
-                Assert.AreEqual(expected.Changes.Count, actual.Changes.Count);
 
-                var firstExpected = expected.Changes.First();
-                var firstActual = actual.Changes.First();
+                var expectedChanges = expected.ToArray();
+                var actualChanges = actual.ToArray();
 
-                Assert.AreEqual(firstExpected.Key.EntityId, firstActual.Key.EntityId);
-                Assert.AreEqual(firstExpected.Value.Entity["Text"], firstActual.Value.Entity["Text"]);
-                Assert.AreEqual(firstExpected.Value.ChangeType, firstActual.Value.ChangeType);
+                Assert.AreEqual(expectedChanges.Length, actualChanges.Length);
 
-                var secondExpected = expected.Changes.Skip(1).First();
-                var secondActual = actual.Changes.Skip(1).First();
+                var firstExpected = expectedChanges.First();
+                var firstActual = actualChanges.First();
 
-                Assert.AreEqual(secondExpected.Key.EntityId, secondActual.Key.EntityId);
-                Assert.AreEqual(secondExpected.Value.ChangeType, secondActual.Value.ChangeType);
+                Assert.AreEqual(firstExpected.EntityId, firstActual.EntityId);
+                Assert.AreEqual(firstExpected.Entity["Text"], firstActual.Entity["Text"]);
+                Assert.AreEqual(firstExpected.ChangeType, firstActual.ChangeType);
+
+                var secondExpected = expectedChanges.Skip(1).First();
+                var secondActual = actualChanges.Skip(1).First();
+
+                Assert.AreEqual(secondExpected.EntityId, secondActual.EntityId);
+                Assert.AreEqual(secondExpected.ChangeType, secondActual.ChangeType);
             }
 
             private static Patch CreateSamplePatch()
@@ -70,13 +73,13 @@ namespace LiteDB.Sync.Tests.Entities
                 var patch = new Patch();
                 patch.AddChanges(CollectionName, new[] { document });
 
-                var operation = patch.Changes.Single();
+                var change = patch.Single();
 
-                Assert.AreEqual(123, operation.Key.EntityId.AsInt32);
-                Assert.AreEqual(CollectionName, operation.Key.CollectionName);
+                Assert.AreEqual(123, change.EntityId.Id.AsInt32);
+                Assert.AreEqual(CollectionName, change.EntityId.CollectionName);
 
-                Assert.AreEqual(EntityChangeType.Upsert, operation.Value.ChangeType);
-                Assert.AreEqual(document, operation.Value.Entity);
+                Assert.AreEqual(EntityChangeType.Upsert, change.ChangeType);
+                Assert.AreEqual(document, change.Entity);
             }
 
             [Test]
@@ -87,12 +90,13 @@ namespace LiteDB.Sync.Tests.Entities
                 var patch = new Patch();
                 patch.AddDeletes(new []{ deletedEntity });
 
-                var operation = patch.Changes.Single();
+                var change = patch.Single();
 
-                Assert.AreEqual(123, operation.Key.EntityId.AsInt32);
-                Assert.AreEqual(EntityChangeType.Delete, operation.Value.ChangeType);
-                Assert.IsNull(operation.Value.Entity);
-                Assert.AreEqual(CollectionName, operation.Key.CollectionName);
+                Assert.AreEqual(123, change.EntityId.Id.AsInt32);
+                Assert.AreEqual(CollectionName, change.EntityId.CollectionName);
+
+                Assert.AreEqual(EntityChangeType.Delete, change.ChangeType);
+                Assert.IsNull(change.Entity);
             }
         }
 
@@ -109,15 +113,15 @@ namespace LiteDB.Sync.Tests.Entities
 
                 var combined = Patch.Combine(patches);
 
-                Assert.AreEqual(1, combined.Changes.Count());
+                Assert.AreEqual(1, combined.Count());
 
-                var operation = combined.Changes.Single();
+                var change = combined.Single();
 
-                Assert.AreEqual(EntityChangeType.Upsert, operation.OperationType);
-                Assert.AreEqual(123, operation.EntityId.AsInt32);
+                Assert.AreEqual(EntityChangeType.Upsert, change.ChangeType);
+                Assert.AreEqual(123, change.EntityId.Id.AsInt32);
 
                 BsonValue actualStringPropValue;
-                operation.Entity.TryGetValue(nameof(TestEntity.Text), out actualStringPropValue);
+                change.Entity.TryGetValue(nameof(TestEntity.Text), out actualStringPropValue);
 
                 Assert.IsNotNull(actualStringPropValue);
                 Assert.AreEqual("Value2", actualStringPropValue.ToString());
@@ -134,12 +138,12 @@ namespace LiteDB.Sync.Tests.Entities
 
                 var combined = Patch.Combine(patches);
 
-                Assert.AreEqual(1, combined.Changes.Count());
+                Assert.AreEqual(1, combined.Count());
 
-                var operation = combined.Changes.Single();
+                var change = combined.Single();
 
-                Assert.AreEqual(EntityChangeType.Delete, operation.OperationType);
-                Assert.AreEqual(123, operation.EntityId.AsInt32);
+                Assert.AreEqual(EntityChangeType.Delete, change.ChangeType);
+                Assert.AreEqual(123, change.EntityId.Id.AsInt32);
             }
 
             [Test]
@@ -153,12 +157,12 @@ namespace LiteDB.Sync.Tests.Entities
 
                 var combined = Patch.Combine(patches);
 
-                Assert.AreEqual(1, combined.Changes.Count());
+                Assert.AreEqual(1, combined.Count());
 
-                var operation = combined.Changes.Single();
+                var change = combined.Single();
 
-                Assert.AreEqual(EntityChangeType.Upsert, operation.OperationType);
-                Assert.AreEqual(123, operation.EntityId.AsInt32);
+                Assert.AreEqual(EntityChangeType.Upsert, change.ChangeType);
+                Assert.AreEqual(123, change.EntityId.Id.AsInt32);
             }
 
             [Test]
@@ -172,7 +176,7 @@ namespace LiteDB.Sync.Tests.Entities
 
                 var combined = Patch.Combine(patches);
 
-                Assert.AreEqual(2, combined.Changes.Count());
+                Assert.AreEqual(2, combined.Count());
             }
 
             private Patch CreatePatch(EntityChangeType opType, string stringPropValue = null, string collectionName = null)

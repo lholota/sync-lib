@@ -11,7 +11,7 @@ namespace LiteDB.Sync
             this.Resolution = ConflictResolution.None;
         }
 
-        public GlobalEntityId EntityId => this.LocalChange.GlobalId;
+        public EntityId EntityId => this.LocalChange.EntityId;
 
         public EntityChange LocalChange { get; }
 

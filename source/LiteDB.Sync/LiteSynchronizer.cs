@@ -53,7 +53,7 @@ namespace LiteDB.Sync
 
         private void ApplyChangesToLocalDb(Patch remoteChanges)
         {
-            var groupped = remoteChanges.GroupBy(x => x.GlobalId.CollectionName, x => x);
+            var groupped = remoteChanges.GroupBy(x => x.EntityId.CollectionName, x => x);
 
             foreach (var group in groupped)
             {

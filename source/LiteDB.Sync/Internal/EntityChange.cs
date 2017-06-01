@@ -11,12 +11,12 @@ namespace LiteDB.Sync.Internal
                 throw new ArgumentNullException(nameof(entity), "Entity cannot be null if the change type is Upsert.");
             }
 
-            this.GlobalId = new GlobalEntityId(collectionName, id);
+            this.EntityId = new EntityId(collectionName, id);
             this.ChangeType = changeType;
             this.Entity = entity;
         }
 
-        internal GlobalEntityId GlobalId { get; }
+        internal EntityId EntityId { get; }
 
         public EntityChangeType ChangeType { get; }
 
@@ -26,11 +26,11 @@ namespace LiteDB.Sync.Internal
         {
             if (this.ChangeType == EntityChangeType.Delete)
             {
-                collection.Delete(this.GlobalId.EntityId);
+                collection.Delete(this.EntityId.Id);
             }
             else
             {
-                collection.Upsert(this.GlobalId.EntityId, this.Entity);
+                collection.Upsert(this.EntityId.Id, this.Entity);
             }
         }
     }

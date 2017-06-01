@@ -1,10 +1,10 @@
 ﻿using System.IO;
 using LiteDB.Sync.Internal;
-using LiteDB.Sync.Tests.Tools;
-using NUnit.Framework;
+using LiteDB.Sync.Tests.TestUtils;
 using Moq;
+using NUnit.Framework;
 
-namespace LiteDB.Sync.Tests
+namespace LiteDB.Sync.Tests.Unit.LiteSyncCollection
 {
     [TestFixture]
     public partial class LiteSyncCollectionTests

@@ -11,13 +11,13 @@ namespace LiteDB.Sync.Internal
 
         public static Patch Combine(IList<Patch> patches)
         {
-            var resultChanges = new Dictionary<GlobalEntityId, EntityChange>();
+            var resultChanges = new Dictionary<EntityId, EntityChange>();
 
             foreach (var patch in patches)
             {
                 foreach (var operation in patch)
                 {
-                    resultChanges[operation.GlobalId] = operation;
+                    resultChanges[operation.EntityId] = operation;
                 }
             }
 
@@ -37,21 +37,21 @@ namespace LiteDB.Sync.Internal
 
         #endregion
 
-        private readonly Dictionary<GlobalEntityId, EntityChange> changes;
+        private readonly Dictionary<EntityId, EntityChange> changes;
 
         public Patch(IEnumerable<EntityChange> initialChanges)
         {
             this.changes = initialChanges.ToDictionary(
-                x => x.GlobalId,
+                x => x.EntityId,
                 x => x);
         }
 
         internal Patch()
         {
-            this.changes = new Dictionary<GlobalEntityId, EntityChange>();
+            this.changes = new Dictionary<EntityId, EntityChange>();
         }
 
-        private Patch(Dictionary<GlobalEntityId, EntityChange> initialChanges)
+        private Patch(Dictionary<EntityId, EntityChange> initialChanges)
         {
             this.changes = initialChanges;
         }
@@ -68,12 +68,12 @@ namespace LiteDB.Sync.Internal
             return this.GetEnumerator();
         }
 
-        internal void RemoveChange(GlobalEntityId id)
+        internal void RemoveChange(EntityId id)
         {
             this.changes.Remove(id);
         }
 
-        internal void ReplaceEntity(GlobalEntityId id, BsonDocument doc)
+        internal void ReplaceEntity(EntityId id, BsonDocument doc)
         {
             this.changes[id].Entity = doc;
         }
@@ -88,7 +88,7 @@ namespace LiteDB.Sync.Internal
             foreach (var bsonDoc in dirtyEntities)
             {
                 var change = new EntityChange(collectionName, bsonDoc["_id"], EntityChangeType.Upsert, bsonDoc);
-                this.changes.Add(change.GlobalId, change);
+                this.changes.Add(change.EntityId, change);
             }
         }
 
@@ -102,7 +102,7 @@ namespace LiteDB.Sync.Internal
             foreach (var deleted in deletedEntities)
             {
                 var change = new EntityChange(deleted.CollectionName, deleted.EntityId, EntityChangeType.Delete, null);
-                this.changes.Add(change.GlobalId, change);
+                this.changes.Add(change.EntityId, change);
             }
         }
     }
