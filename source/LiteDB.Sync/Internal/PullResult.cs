@@ -1,17 +1,16 @@
 ﻿using System.Collections.Generic;
-using LiteDB.Sync.Contract;
 
-namespace LiteDB.Sync
+namespace LiteDB.Sync.Internal
 {
-    public class LiteSyncPullResult
+    internal class PullResult
     {
-        public LiteSyncPullResult(IList<Patch> patches, object etag = null)
+        public PullResult(IList<Patch> patches, string etag = null)
         {
             this.RemoteChanges = this.CombineChanges(patches);
             this.Etag = etag;
         }
 
-        public object Etag { get; }
+        public string Etag { get; }
 
         public Patch RemoteChanges { get; }
 

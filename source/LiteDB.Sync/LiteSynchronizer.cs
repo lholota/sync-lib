@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LiteDB.Sync.Contract;
 using LiteDB.Sync.Exceptions;
 using LiteDB.Sync.Internal;
 
@@ -11,9 +10,11 @@ namespace LiteDB.Sync
     {
         private readonly LiteDatabase db;
         private readonly LiteSyncConfiguration config;
+        private readonly ICloudClient cloudClient;
 
-        internal LiteSynchronizer(LiteDatabase db, LiteSyncConfiguration config)
+        internal LiteSynchronizer(LiteDatabase db, LiteSyncConfiguration config, ICloudClient cloudClient)
         {
+            this.cloudClient = cloudClient;
             this.config = config;
             this.db = db;
         }
@@ -25,7 +26,7 @@ namespace LiteDB.Sync
             var localHead = this.db.GetSyncHead();
             ct.ThrowIfCancellationRequested();
 
-            var pull = await this.config.CloudProvider.Pull(localHead?.PatchId, ct);
+            var pull = await this.cloudClient.Pull(localHead, ct);
 
             using (this.db.Engine.Locker.Exclusive())
             {
@@ -43,7 +44,7 @@ namespace LiteDB.Sync
                     this.ApplyChangesToLocalDb(pull.RemoteChanges);
 
                     // new head identifier should be generated -> create a push request which would create the file payloads etc. automatically?
-                    await this.config.CloudProvider.Push(localChanges, pull.Etag, ct);
+                    await this.cloudClient.Push(localChanges, pull.Etag, ct);
 
                     tx.Commit();
                 }

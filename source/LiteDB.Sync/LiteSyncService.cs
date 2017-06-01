@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using LiteDB.Sync.Internal;
 
 namespace LiteDB.Sync
 {
@@ -10,11 +11,18 @@ namespace LiteDB.Sync
         private CancellationTokenSource syncInProgressTokenSource;
 
         private readonly object syncControlLock = new object();
+        private readonly ICloudClient cloudClient;
         private readonly LiteDatabase innerDb;
         private readonly LiteSyncConfiguration config;
 
-        protected LiteSyncService(LiteDatabase innerDb, LiteSyncConfiguration config)
+        public LiteSyncService(LiteDatabase innerDb, LiteSyncConfiguration config)
+            : this(innerDb, config, new Factory())
         {
+        }
+
+        internal LiteSyncService(LiteDatabase innerDb, LiteSyncConfiguration config, IFactory factory)
+        {
+            this.cloudClient = factory.CreateCloudClient(config.CloudProvider);
             this.innerDb = innerDb;
             this.config = config;
         }
@@ -56,7 +64,7 @@ namespace LiteDB.Sync
                 }
 
                 this.syncInProgressTokenSource = new CancellationTokenSource();
-                var ctx = new LiteSynchronizer(this.innerDb, this.config);
+                var ctx = new LiteSynchronizer(this.innerDb, this.config, this.cloudClient);
 
                 this.syncInProgressTask = ctx.Synchronize(this.syncInProgressTokenSource.Token);
 

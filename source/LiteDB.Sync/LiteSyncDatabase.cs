@@ -38,7 +38,7 @@ namespace LiteDB.Sync
         {
             var nativeCollection = this.db.GetCollection<T>(name);
 
-            return this.WrapCollectionIfRequired<T>(name, nativeCollection);
+            return this.WrapCollectionIfRequired(name, nativeCollection);
         }
 
         public ILiteCollection<T> GetCollection<T>()

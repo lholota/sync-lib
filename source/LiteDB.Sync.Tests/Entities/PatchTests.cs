@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using LiteDB.Sync.Contract;
 using LiteDB.Sync.Internal;
 using LiteDB.Sync.Tests.Tools;
 using NUnit.Framework;

@@ -1,6 +1,6 @@
 using System;
 
-namespace LiteDB.Sync.Contract
+namespace LiteDB.Sync.Internal
 {
     public class EntityChange
     {

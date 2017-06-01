@@ -1,11 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
-using LiteDB.Sync.Contract;
 
-namespace LiteDB.Sync
+namespace LiteDB.Sync.Internal
 {
-    using System.Collections.Generic;
-
     internal static class Extensions
     {
         internal static IEnumerable<BsonDocument> FindDirtyEntities(this ILiteCollection<BsonDocument> collection)

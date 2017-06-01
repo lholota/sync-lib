@@ -1,5 +1,4 @@
-﻿using LiteDB.Sync.Contract;
-using LiteDB.Sync.Tests.Tools;
+﻿using LiteDB.Sync.Tests.Tools;
 using NUnit.Framework;
 
 namespace LiteDB.Sync.Tests

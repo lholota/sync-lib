@@ -1,4 +1,4 @@
-namespace LiteDB.Sync.Contract
+namespace LiteDB.Sync.Internal
 {
     public enum EntityChangeType
     {

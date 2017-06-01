@@ -2,11 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using LiteDB.Sync.Internal;
 
-namespace LiteDB.Sync.Contract
+namespace LiteDB.Sync.Internal
 {
-    public class Patch : IEnumerable<EntityChange>
+    internal class Patch : IEnumerable<EntityChange>
     {
         #region Static
 
