@@ -14,7 +14,7 @@ namespace LiteDB.Sync.Tests.Unit.LiteSyncCollection
 		        var entity = new TestEntity(1);
 		        this.NativeCollection.Insert(entity);
 
-		        this.SyncedCollection.Upsert(entity);
+		        this.SyncedCollection.Update(entity);
 
 		        var found = this.NativeCollection.FindOne(Query.All());
 		        Assert.AreEqual(1, found.Id);
@@ -54,7 +54,7 @@ namespace LiteDB.Sync.Tests.Unit.LiteSyncCollection
                 entities[0].Text = "Hello";
                 entities[1].Text = "Hello";
 
-                this.SyncedCollection.Upsert(entities);
+                this.SyncedCollection.Update(entities);
 
                 var found = this.NativeCollection.FindAll().ToArray();
                 Assert.AreEqual(2, found.Length);

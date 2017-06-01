@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using LiteDB.Sync.Tests.TestUtils;
 using NUnit.Framework;
 
@@ -100,6 +101,25 @@ namespace LiteDB.Sync.Tests.Unit.LiteSyncCollection
 
                 this.VerifyDeletedEntitiesEmpty();
             }
+
+            [Test]
+            public void ShouldReturnDeleteEntityIds()
+            {
+                var entity1 = new TestEntity(1);
+                var entity2 = new TestEntity(2);
+                var entity3 = new TestEntity(3);
+
+                this.NativeCollection.Insert(entity1);
+                this.NativeCollection.Insert(entity2);
+                this.NativeCollection.Insert(entity3);
+
+                var deletedCount = this.SyncedCollection.Delete(x => x.Id <= 2, out IList<BsonValue> deletedIds);
+
+                Assert.AreEqual(2, deletedCount);
+                Assert.AreEqual(2, deletedIds.Count);
+                Assert.IsTrue(deletedIds.Any(x => x.AsInt32 == 1));
+                Assert.IsTrue(deletedIds.Any(x => x.AsInt32 == 2));
+            }
         }
 
         public class WhenDeletingItemsByQuery : LiteSyncCollectionTests
@@ -171,6 +191,25 @@ namespace LiteDB.Sync.Tests.Unit.LiteSyncCollection
                 Assert.AreEqual(3, found[0].Id);
 
                 this.VerifyDeletedEntitiesEmpty();
+            }
+
+            [Test]
+            public void ShouldReturnDeleteEntityIds()
+            {
+                var entity1 = new TestEntity(1);
+                var entity2 = new TestEntity(2);
+                var entity3 = new TestEntity(3);
+
+                this.NativeCollection.Insert(entity1);
+                this.NativeCollection.Insert(entity2);
+                this.NativeCollection.Insert(entity3);
+
+                var deletedCount = this.SyncedCollection.Delete(Query.LTE("_id", 2), out IList<BsonValue> deletedIds);
+
+                Assert.AreEqual(2, deletedCount);
+                Assert.AreEqual(2, deletedIds.Count);
+                Assert.IsTrue(deletedIds.Any(x => x.AsInt32 == 1));
+                Assert.IsTrue(deletedIds.Any(x => x.AsInt32 == 2));
             }
         }
 
