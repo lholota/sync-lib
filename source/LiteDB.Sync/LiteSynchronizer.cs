@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB.Sync.Contract;
+using LiteDB.Sync.Exceptions;
 using LiteDB.Sync.Internal;
 
 namespace LiteDB.Sync
@@ -49,21 +50,6 @@ namespace LiteDB.Sync
             }
         }
 
-        private async Task Pull(Head localHead, CancellationToken ct)
-        {
-            var headFile = await this.config.CloudProvider.DownloadHeadFile(ct);
-            
-
-
-            // Deserialize head
-
-        }
-
-        private async Task Push(Patch localChanges, CancellationToken ct)
-        {
-            
-        }
-
         private void ApplyChangesToLocalDb(Patch remoteChanges)
         {
             var groupped = remoteChanges.GroupBy(x => x.GlobalId.CollectionName, x => x);
@@ -92,18 +78,18 @@ namespace LiteDB.Sync
 
                 switch (conflict.Resolution)
                 {
-                    case ConflictResolution.None:
-                        throw LiteSyncException.ConflictNotResolved(conflict.LocalChange.GlobalId);
+                    case LiteSyncConflict.ConflictResolution.None:
+                        throw new LiteSyncConflictNotResolvedException(conflict.EntityId);
 
-                    case ConflictResolution.KeepLocal:
+                    case LiteSyncConflict.ConflictResolution.KeepLocal:
                         remoteChanges.RemoveChange(conflict.EntityId);
                         break;
 
-                    case ConflictResolution.KeepRemote:
+                    case LiteSyncConflict.ConflictResolution.KeepRemote:
                         localChanges.RemoveChange(conflict.EntityId);
                         break;
 
-                    case ConflictResolution.Merge:
+                    case LiteSyncConflict.ConflictResolution.Merge:
                         localChanges.ReplaceEntity(conflict.EntityId, conflict.MergedEntity);
                         localChanges.ReplaceEntity(conflict.EntityId, conflict.MergedEntity);
                         break;

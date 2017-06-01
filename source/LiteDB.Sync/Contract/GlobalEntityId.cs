@@ -46,5 +46,10 @@ namespace LiteDB.Sync.Contract
         {
             return !Equals(left, right);
         }
+
+        public override string ToString()
+        {
+            return string.Format("(Collection: {0}, Id: {1})", this.CollectionName, this.EntityId);
+        }
     }
 }

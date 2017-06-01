@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using LiteDB.Sync.Exceptions;
 using LiteDB.Sync.Tests.Tools;
 using Moq;
 using NUnit.Framework;

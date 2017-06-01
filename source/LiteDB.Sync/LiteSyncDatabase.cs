@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using LiteDB.Sync.Exceptions;
 using LiteDB.Sync.Internal;
 
 namespace LiteDB.Sync
@@ -101,7 +102,7 @@ namespace LiteDB.Sync
             {
                 if (validateType && !typeof(T).IsSyncEntityType())
                 {
-                    throw LiteSyncException.EntityDoesntImplementInterface(typeof(T));
+                    throw new LiteSyncInvalidEntityException(typeof(T));
                 }
 
                 return new LiteSyncCollection<T>(nativeCollection, this);
