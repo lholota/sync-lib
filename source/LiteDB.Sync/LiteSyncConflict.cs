@@ -1,4 +1,5 @@
-﻿using LiteDB.Sync.Internal;
+﻿using System;
+using LiteDB.Sync.Internal;
 
 namespace LiteDB.Sync
 {
@@ -6,6 +7,11 @@ namespace LiteDB.Sync
     {
         public LiteSyncConflict(EntityChange localChange, EntityChange remoteChange)
         {
+            if (localChange?.EntityId != remoteChange?.EntityId)
+            {
+                throw new ArgumentException("The conflicting changes must be both with the same EntityId.", nameof(localChange));
+            }
+
             this.LocalChange = localChange;
             this.RemoteChange = remoteChange;
             this.Resolution = ConflictResolution.None;
@@ -28,7 +34,7 @@ namespace LiteDB.Sync
 
         public void ResolveKeepRemote()
         {
-            this.Resolution = ConflictResolution.KeepLocal;
+            this.Resolution = ConflictResolution.KeepRemote;
         }
 
         public void ResolveMerged(BsonDocument mergedEntity)

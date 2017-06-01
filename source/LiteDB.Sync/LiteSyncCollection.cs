@@ -37,46 +37,6 @@ namespace LiteDB.Sync
             return this.UnderlyingCollection.Count(predicate);
         }
 
-        public int Delete(Query query)
-        {
-            int result;
-
-            using (var tx = this.database.BeginTrans())
-            {
-                result = this.UnderlyingCollection.Delete(query, out IList<BsonValue> deletedIds);
-
-                if (deletedIds != null && deletedIds.Count > 0)
-                {
-                    var deletedEntities = deletedIds.Select(x => new DeletedEntity(this.Name, x));
-                    this.database.GetDeletedEntitiesCollection().Insert(deletedEntities);
-                }
-
-                tx.Commit();
-            }
-
-            return result;
-        }
-
-        public int Delete(Expression<Func<T, bool>> predicate)
-        {
-            int result;
-
-            using (var tx = this.database.BeginTrans())
-            {
-                result = this.UnderlyingCollection.Delete(predicate, out IList<BsonValue> deletedIds);
-
-                if (deletedIds != null && deletedIds.Count > 0)
-                {
-                    var deletedEntities = deletedIds.Select(x => new DeletedEntity(this.Name, x));
-                    this.database.GetDeletedEntitiesCollection().Insert(deletedEntities);
-                }
-
-                tx.Commit();
-            }
-
-            return result;
-        }
-
         public bool Delete(BsonValue id)
         {
             bool result;
@@ -97,9 +57,54 @@ namespace LiteDB.Sync
             return result;
         }
 
+        public int Delete(Query query)
+        {
+            return this.Delete(query, out IList<BsonValue> notRequired);
+        }
+
+        public int Delete(Expression<Func<T, bool>> predicate)
+        {
+            return this.Delete(predicate, out IList<BsonValue> notRequired);
+        }
+
         public int Delete(Query query, out IList<BsonValue> deletedIds)
         {
-            throw new NotImplementedException();
+            int result;
+
+            using (var tx = this.database.BeginTrans())
+            {
+                result = this.UnderlyingCollection.Delete(query, out deletedIds);
+
+                if (deletedIds != null && deletedIds.Count > 0)
+                {
+                    var deletedEntities = deletedIds.Select(x => new DeletedEntity(this.Name, x));
+                    this.database.GetDeletedEntitiesCollection().Insert(deletedEntities);
+                }
+
+                tx.Commit();
+            }
+
+            return result;
+        }
+
+        public int Delete(Expression<Func<T, bool>> predicate, out IList<BsonValue> deletedIds)
+        {
+            int result;
+
+            using (var tx = this.database.BeginTrans())
+            {
+                result = this.UnderlyingCollection.Delete(predicate, out deletedIds);
+
+                if (deletedIds != null && deletedIds.Count > 0)
+                {
+                    var deletedEntities = deletedIds.Select(x => new DeletedEntity(this.Name, x));
+                    this.database.GetDeletedEntitiesCollection().Insert(deletedEntities);
+                }
+
+                tx.Commit();
+            }
+
+            return result;
         }
 
         public bool DropIndex(string field)
