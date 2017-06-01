@@ -9,6 +9,14 @@ namespace LiteDB.Sync
         {
             public const int EntityDoesntImplementInterfaceErrorCode = 1;
             public const int ConflictNotResolvedErrorCode = 2;
+            public const int ProviderAuthFailedErrorCode = 3;
+        }
+
+        public static LiteSyncException ProviderAuthFailed(Type providerType, Exception innerEx)
+        {
+            var message = string.Format("Authentication of the {0} provider failed.", providerType);
+
+            return new LiteSyncException(ErrorCodes.ProviderAuthFailedErrorCode, message);
         }
 
         internal static LiteSyncException EntityDoesntImplementInterface(Type type)
@@ -28,8 +36,8 @@ namespace LiteDB.Sync
             return new LiteSyncException(ErrorCodes.ConflictNotResolvedErrorCode, message);
         }
 
-        private LiteSyncException(int errorCode, string message)
-            : base(message)
+        private LiteSyncException(int errorCode, string message, Exception innerEx = null)
+            : base(message, innerEx)
         {
             this.ErrorCode = errorCode;
         }

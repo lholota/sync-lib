@@ -1,5 +1,4 @@
 ﻿using LiteDB.Sync.Contract;
-using LiteDB.Sync.Internal;
 
 namespace LiteDB.Sync
 {
@@ -36,6 +35,14 @@ namespace LiteDB.Sync
         {
             this.Resolution = ConflictResolution.Merge;
             this.MergedEntity = mergedEntity;
+        }
+
+        internal enum ConflictResolution
+        {
+            None,
+            KeepLocal,
+            KeepRemote,
+            Merge
         }
     }
 }

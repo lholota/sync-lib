@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB.Sync.Contract;
@@ -21,6 +19,8 @@ namespace LiteDB.Sync
 
         internal async Task Synchronize(CancellationToken ct)
         {
+            this.config.CloudProvider.Initialize();
+
             var localHead = this.db.GetSyncHead();
             ct.ThrowIfCancellationRequested();
 
@@ -47,6 +47,21 @@ namespace LiteDB.Sync
                     tx.Commit();
                 }
             }
+        }
+
+        private async Task Pull(Head localHead, CancellationToken ct)
+        {
+            var headFile = await this.config.CloudProvider.DownloadHeadFile(ct);
+            
+
+
+            // Deserialize head
+
+        }
+
+        private async Task Push(Patch localChanges, CancellationToken ct)
+        {
+            
         }
 
         private void ApplyChangesToLocalDb(Patch remoteChanges)
