@@ -4,6 +4,7 @@
     <TargetFramework>netstandard1.4</TargetFramework>
 	<PackageTargetFallback>portable-net45+win8+wp8+wpa81</PackageTargetFallback>
 	<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+	<DebugType>full</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
