@@ -105,7 +105,7 @@ namespace LiteDb.Sync.OneDrive
             }
             catch (Exception ex)
             {
-                throw LiteSyncException.ProviderAuthFailed(this.GetType(), ex);
+                throw new LiteSyncCloudAuthFailedException(this.GetType(), ex);
             }
         }
     }

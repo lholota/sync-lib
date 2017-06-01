@@ -3,8 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard1.4</TargetFramework>
 	<PackageTargetFallback>portable-net45+win8+wp8+wpa81</PackageTargetFallback>
-	<GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
-    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+	<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>

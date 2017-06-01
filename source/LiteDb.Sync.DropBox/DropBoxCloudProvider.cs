@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Dropbox.Api;
@@ -14,22 +15,22 @@ namespace LiteDb.Sync.DropBox
             throw new NotImplementedException();
         }
 
-        public Task<object> DownloadHeadFile(CancellationToken ct)
+        public Task<HeadDownloadResult> DownloadHeadFile(CancellationToken ct)
         {
             throw new NotImplementedException();
         }
 
-        public Task UploadHeadFile(byte[] contents, object etag, CancellationToken ct)
+        public Task UploadHeadFile(Stream contents, string etag, CancellationToken ct)
         {
             throw new NotImplementedException();
         }
 
-        public Task<byte[]> DownloadPatch(Guid id, CancellationToken ct)
+        public Task<Stream> DownloadPatch(Guid id, CancellationToken ct)
         {
             throw new NotImplementedException();
         }
 
-        public Task UploadPatch(byte[] contents, Guid id, CancellationToken ct)
+        public Task UploadPatch(Stream contents, Guid id, CancellationToken ct)
         {
             throw new NotImplementedException();
         }
