@@ -15,6 +15,8 @@ namespace LiteDB.Sync
         private readonly LiteDatabase db;
         private readonly ILiteSyncService syncService;
 
+        // TBA: Ctors according to the original ones
+        // TBA: Lite sync repository
         public LiteSyncDatabase(ILiteSyncService syncService, LiteDatabase db)
         {
             this.syncService = syncService;
@@ -109,6 +111,20 @@ namespace LiteDB.Sync
             }
 
             return nativeCollection;
+        }
+
+        private void EnsureSyncIndices()
+        {
+            using (var tx = this.db.BeginTrans())
+            {
+                foreach (var collectionName in this.syncService.SyncedCollections)
+                {
+                    var collection = this.db.GetCollection(collectionName);
+                    collection.EnsureIndex(nameof(ILiteSyncEntity.RequiresSync));
+                }
+
+                tx.Commit();
+            }
         }
     }
 }

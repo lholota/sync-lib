@@ -13,8 +13,13 @@ namespace LiteDB.Sync.Internal
             this.provider = provider;
         }
 
-        public Task<PullResult> Pull(Head localHead, CancellationToken ct)
+        public Task<PullResult> Pull(CloudState localCloudState, CancellationToken ct)
         {
+            if (localCloudState == null)
+            {
+                var localHead = this.provider.CreateLocalState();
+            }
+
             throw new NotImplementedException();
         }
 

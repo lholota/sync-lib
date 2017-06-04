@@ -32,19 +32,7 @@ namespace LiteDB.Sync
         //public event EventHandler SyncProgressFinished;
         //public event EventHandler SyncFailed;
 
-        public void EnsureIndices()
-        {
-            using (var tx = this.innerDb.BeginTrans())
-            {
-                foreach (var collectionName in this.config.SyncedCollections)
-                {
-                    var collection = this.innerDb.GetCollection(collectionName);
-                    collection.EnsureIndex(nameof(ILiteSyncEntity.RequiresSync));
-                }
-
-                tx.Commit();
-            }
-        }
+        // TODO: Pre-initialize both, when accessed, ensure indices
 
         public Task Synchronize(bool forceRestart)
         {

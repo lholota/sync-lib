@@ -1,9 +1,11 @@
 ﻿using System.IO;
+using System.Linq;
 using LiteDB.Sync.Exceptions;
 using LiteDB.Sync.Internal;
 using LiteDB.Sync.Tests.TestUtils;
 using Moq;
 using NUnit.Framework;
+using NUnit.Framework.Internal;
 
 namespace LiteDB.Sync.Tests.Unit
 {
@@ -14,6 +16,8 @@ namespace LiteDB.Sync.Tests.Unit
         protected LiteDatabase InnerDb;
         protected LiteSyncDatabase SyncDatabase;
         protected Mock<ILiteSyncService> ServiceMock;
+
+        // TBA: Ensure indices - lazilly on any operation
 
         [SetUp]
         public void Setup()
@@ -63,6 +67,17 @@ namespace LiteDB.Sync.Tests.Unit
                 this.ServiceMock.SetupGet(x => x.SyncedCollections).Returns(new[] { nameof(NonSyncableTestEntity) });
 
                 Assert.Throws<LiteSyncInvalidEntityException>(() => this.SyncDatabase.GetCollection<NonSyncableTestEntity>());
+            }
+
+            [Test]
+            public void ShouldCreateSyncIndices()
+            {
+                this.ServiceMock.SetupGet(x => x.SyncedCollections).Returns(new[] { nameof(TestEntity) });
+                var collection = this.SyncDatabase.GetCollection<TestEntity>();
+
+                var indices = collection.GetIndexes();
+
+                Assert.IsTrue(indices.Any(x => x.Field == nameof(ILiteSyncEntity.RequiresSync)));
             }
         }
 
