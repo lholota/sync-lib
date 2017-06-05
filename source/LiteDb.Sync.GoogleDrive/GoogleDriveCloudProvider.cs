@@ -1,53 +1,77 @@
-﻿using System;
-using System.IO;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LiteDB.Sync;
-using LiteDB.Sync.Internal;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Drive.v3;
+using Google.Apis.Services;
 
 namespace LiteDb.Sync.GoogleDrive
 {
-    public class GoogleDriveCloudProvider : ILiteSyncCloudProvider
+    public class GoogleDriveCloudProvider
     {
+        private const string InitFileName = "LiteSync.init";
+
+        private static readonly IEnumerable<string> Scopes = new[] { "" };
+
+        private readonly string _clientId;
+        private readonly string _clientSecret;
+        private readonly string _appName;
+
+        private DriveService driveService;
+
         /*
          * Has local state -> knows what file id is next -> can check if it exists directly
          * Doesn't have local state 
          *      -> doesn't know if it's connecting to existing repository or to a new one
          */
-
-
-        public Task<CloudState> CreateCloudState()
+        public GoogleDriveCloudProvider(string clientId, string clientSecret, string appName)
         {
-            /*
-             * Check if LiteSync.init file exists
-             *  -> exists -> download and set the next 
-             */
+            this._clientId = clientId;
+            this._clientSecret = clientSecret;
+            this._appName = appName;
         }
 
 
-        public void Initialize()
+        public async Task InitializeRemoteStorage(CancellationToken ct)
         {
-            throw new NotImplementedException();
+            await this.EnsureService(ct);
+
+            var listRequest = this.driveService.Files.List();
+            listRequest.Fields = "nextPageToken, files(id, name)";
+            listRequest.Q = string.Format("name = '{0}'", InitFileName);
+
+            var response = await listRequest.ExecuteAsync(ct);
+
+            if (response.Files.Any())
+            {
+                // Get the file and return the next id
+            }
         }
 
-        public Task<HeadDownloadResult> DownloadHeadFile(CancellationToken ct)
+        private async Task EnsureService(CancellationToken ct)
         {
-            throw new NotImplementedException();
+            if (this.driveService == null)
+            {
+                var credentials = await this.Authenticate(ct);
+
+                this.driveService = new DriveService(new BaseClientService.Initializer()
+                {
+                    HttpClientInitializer = credentials,
+                    ApplicationName = this._appName,
+                });
+            }
         }
 
-        public Task UploadHeadFile(Stream contents, string etag, CancellationToken ct)
+        private async Task<UserCredential> Authenticate(CancellationToken ct)
         {
-            throw new NotImplementedException();
-        }
+            var secrets = new ClientSecrets
+            {
+                ClientId = this._clientId,
+                ClientSecret = this._clientSecret
+            };
 
-        public Task<Stream> DownloadPatch(Guid id, CancellationToken ct)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task UploadPatch(Stream contents, Guid id, CancellationToken ct)
-        {
-            throw new NotImplementedException();
+            return await GoogleWebAuthorizationBroker.AuthorizeAsync(secrets, this.Scopes, "user", ct);
         }
     }
 }
