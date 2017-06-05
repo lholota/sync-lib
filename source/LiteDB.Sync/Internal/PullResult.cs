@@ -1,18 +1,21 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace LiteDB.Sync.Internal
 {
     internal class PullResult
     {
-        public PullResult(IList<Patch> patches, string etag = null)
+        public PullResult(IList<Patch> patches, CloudState cloudState)
         {
             this.RemoteChanges = this.CombineChanges(patches);
-            this.Etag = etag;
+            this.CloudState = cloudState;
         }
 
-        public string Etag { get; }
-
         public Patch RemoteChanges { get; }
+
+        public CloudState CloudState { get; }
+
+        public bool HasChanges => this.RemoteChanges != null && this.RemoteChanges.Any();
 
         private Patch CombineChanges(IList<Patch> patches)
         {

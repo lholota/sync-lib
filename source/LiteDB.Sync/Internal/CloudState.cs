@@ -1,9 +1,15 @@
-﻿using System;
-
-namespace LiteDB.Sync.Internal
+﻿namespace LiteDB.Sync.Internal
 {
-    public class CloudState
+    internal class CloudState
     {
-        public Guid NextPatchId { get; set; }
+        public CloudState()
+        { }
+
+        public CloudState(string nextPatchId)
+        {
+            this.NextPatchId = nextPatchId;
+        }
+
+        public string NextPatchId { get; set; }
     }
 }

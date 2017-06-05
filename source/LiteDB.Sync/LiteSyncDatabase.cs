@@ -8,7 +8,7 @@ namespace LiteDB.Sync
 {
     public class LiteSyncDatabase : ILiteDatabase
     {
-        internal const string LocalHeadId = "LocalHead";
+        internal const string LocalCloudStateId = "LocalHead";
         internal const string SyncStateCollectionName = "LiteSync_State";
         internal const string DeletedEntitiesCollectionName = "LiteSync_Deleted";
 

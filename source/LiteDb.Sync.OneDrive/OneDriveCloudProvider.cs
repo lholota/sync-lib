@@ -30,7 +30,7 @@ namespace LiteDb.Sync.OneDrive
         }
 
         // TODO: Wrap exceptions in individual methods
-        public void Initialize()
+        public void EnsureClient()
         {
             this.graphClient = new GraphServiceClient(
                 "https://graph.microsoft.com/v1.0",
@@ -42,30 +42,35 @@ namespace LiteDb.Sync.OneDrive
                     }));
         }
 
-        public async Task<HeadDownloadResult> DownloadHeadFile(CancellationToken ct)
+        public async Task<Stream> DownloadInitFile(CancellationToken ct)
         {
+            this.EnsureClient();
+
             var driveItem = await this.graphClient.Me.Drive.Special.AppRoot
                 .ItemWithPath(HeadFileName)
                 .Request()
                 .GetAsync(ct);
 
-            return new HeadDownloadResult(driveItem.Content, driveItem.ETag);
+            return driveItem.Content;
         }
 
-        public async Task UploadHeadFile(Stream contents, string etag, CancellationToken ct)
+        public async Task UploadInitFile(Stream contents)
         {
+            this.EnsureClient();
+
             var driveItem = new DriveItem();
             driveItem.Content = contents;
-            driveItem.ETag = etag;
 
             await this.graphClient.Me.Drive.Special.AppRoot
-                .ItemWithPath(HeadFileName)
-                .Request()
-                .UpdateAsync(driveItem, ct);
+                      .ItemWithPath(HeadFileName)
+                      .Request()
+                      .UpdateAsync(driveItem);
         }
 
-        public async Task<Stream> DownloadPatch(Guid id, CancellationToken ct)
+        public async Task<Stream> DownloadPatchFile(string id, CancellationToken ct)
         {
+            this.EnsureClient();
+
             var fileName = string.Format(PatchFileNameFormat, id);
 
             var driveItem = await this.graphClient.Me.Drive.Special.AppRoot
@@ -76,8 +81,10 @@ namespace LiteDb.Sync.OneDrive
             return driveItem.Content;
         }
 
-        public async Task UploadPatch(Stream contents, Guid id, CancellationToken ct)
+        public async Task UploadPatchFile(string id, Stream contents)
         {
+            this.EnsureClient();
+
             var fileName = string.Format(PatchFileNameFormat, id);
 
             var driveItem = new DriveItem();
@@ -86,7 +93,7 @@ namespace LiteDb.Sync.OneDrive
             await this.graphClient.Me.Drive.Special.AppRoot
                       .ItemWithPath(fileName)
                       .Request()
-                      .UpdateAsync(driveItem, ct);
+                      .UpdateAsync(driveItem);
         }
 
         private async Task<string> GetUserToken()
