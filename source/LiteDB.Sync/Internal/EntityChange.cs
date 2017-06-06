@@ -54,32 +54,27 @@ namespace LiteDB.Sync.Internal
         [JsonIgnore]
         public BsonDocument Entity { get; internal set; }
 
-        [JsonProperty]
-        internal IDictionary<string, object> RawValues => this.GetEntityValues();
-        
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        internal IDictionary<string, object> RawValues
+        {
+            get
+            {
+                return this.Entity?.ToDictionary(
+                    x => x.Key,
+                    x => x.Value.RawValue);
+            }
+        }
 
         internal void Apply(ILiteCollection<BsonDocument> collection)
         {
             if (this.ChangeType == EntityChangeType.Delete)
             {
-                collection.Delete(this.EntityId.IdAsBson);
+                collection.Delete(this.EntityId.BsonId);
             }
             else
             {
-                collection.Upsert(this.EntityId.IdAsBson, this.Entity);
+                collection.Upsert(this.EntityId.BsonId, this.Entity);
             }
-        }
-
-        private IDictionary<string, object> GetEntityValues()
-        {
-            if (this.Entity == null)
-            {
-                return null;
-            }
-
-            return this.Entity.ToDictionary(
-                x => x.Key,
-                x => x.Value.RawValue);
         }
     }
 }

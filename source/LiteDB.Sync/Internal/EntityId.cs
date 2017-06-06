@@ -20,28 +20,28 @@ namespace LiteDB.Sync.Internal
             this.Validate(collectionName, id);
 
             this.CollectionName = collectionName;
-            this.Id = id.RawValue;
+            this.BsonId = id;
         }
 
         [JsonConstructor]
         public EntityId(string collectionName, object id)
         {
             this.CollectionName = collectionName;
-            this.Id = id;
+            this.BsonId = new BsonValue(id);
         }
 
         public string CollectionName { get; }
 
         [JsonProperty(TypeNameHandling = TypeNameHandling.All)]
-        public object Id { get; }
+        public object Id => this.BsonId.RawValue;
 
         [JsonIgnore]
-        public BsonValue IdAsBson => new BsonValue(this.Id);
+        public BsonValue BsonId { get; }
 
         protected bool Equals(EntityId other)
         {
             return string.Equals(this.CollectionName, other.CollectionName, StringComparison.OrdinalIgnoreCase) 
-                && this.Id.Equals(other.Id);
+                && this.BsonId == other.BsonId;
         }
 
         public override bool Equals(object obj)
@@ -57,7 +57,7 @@ namespace LiteDB.Sync.Internal
         {
             unchecked
             {
-                return (StringComparer.OrdinalIgnoreCase.GetHashCode(this.CollectionName) * 397) ^ this.Id.GetHashCode();
+                return (StringComparer.OrdinalIgnoreCase.GetHashCode(this.CollectionName) * 397) ^ this.BsonId.GetHashCode();
             }
         }
 

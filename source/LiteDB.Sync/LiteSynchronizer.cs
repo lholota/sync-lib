@@ -55,9 +55,9 @@ namespace LiteDB.Sync
             {
                 while (!pushSuccessful)
                 {
-                    this.ResolveConflicts(localChanges, pull.RemoteChanges, ct);
+                    this.ResolveConflicts(localChanges, pull.RemotePatch, ct);
 
-                    this.ApplyChangesToLocalDb(pull.RemoteChanges);
+                    this.ApplyChangesToLocalDb(pull.RemotePatch);
 
                     try
                     {
@@ -84,7 +84,7 @@ namespace LiteDB.Sync
 
         private void ApplyChangesToLocalDb(Patch remoteChanges) // TODO: Add ct?
         {
-            var groupped = remoteChanges.GroupBy(x => x.EntityId.CollectionName, x => x);
+            var groupped = remoteChanges.Changes.GroupBy(x => x.EntityId.CollectionName, x => x);
 
             foreach (var group in groupped)
             {

@@ -18,8 +18,8 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
                 var pullResult = new PullResult(new List<Patch> { first, second }, new CloudState());
 
-                Assert.IsNotNull(pullResult.RemoteChanges);
-                Assert.AreEqual(1, pullResult.RemoteChanges.Count());
+                Assert.IsNotNull(pullResult.RemotePatch);
+                Assert.AreEqual(1, pullResult.RemotePatch.Changes.Count());
             }
         }
 

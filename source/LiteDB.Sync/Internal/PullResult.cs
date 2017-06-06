@@ -7,7 +7,7 @@ namespace LiteDB.Sync.Internal
     {
         public PullResult(IList<Patch> patches, CloudState cloudState)
         {
-            this.RemoteChanges = this.CombineChanges(patches);
+            this.RemotePatch = this.CombineChanges(patches);
             this.CloudState = cloudState;
         }
 
@@ -20,13 +20,13 @@ namespace LiteDB.Sync.Internal
         {
         }
 
-        public Patch RemoteChanges { get; }
+        public Patch RemotePatch { get; }
 
         public CloudState CloudState { get; }
 
         public bool CloudStateChanged => this.CloudState != null;
 
-        public bool HasChanges => this.RemoteChanges != null && this.RemoteChanges.Any();
+        public bool HasChanges => this.RemotePatch != null && this.RemotePatch.Changes.Any();
 
         private Patch CombineChanges(IList<Patch> patches)
         {

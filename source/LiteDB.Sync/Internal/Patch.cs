@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 
 namespace LiteDB.Sync.Internal
 {
-    internal class Patch : IEnumerable<EntityChange>
+    internal class Patch
     {
         #region Static
 
@@ -16,7 +15,7 @@ namespace LiteDB.Sync.Internal
 
             foreach (var patch in patches)
             {
-                foreach (var operation in patch)
+                foreach (var operation in patch.Changes)
                 {
                     resultChanges[operation.EntityId] = operation;
                 }
@@ -40,17 +39,17 @@ namespace LiteDB.Sync.Internal
 
         private readonly Dictionary<EntityId, EntityChange> changes;
 
+        internal Patch()
+        {
+            this.changes = new Dictionary<EntityId, EntityChange>();
+        }
+
         [JsonConstructor]
-        internal Patch(IEnumerable<EntityChange> initialChanges)
+        internal Patch([JsonProperty(nameof(Changes))] IEnumerable<EntityChange> initialChanges)
         {
             this.changes = initialChanges.ToDictionary(
                 x => x.EntityId,
                 x => x);
-        }
-
-        internal Patch()
-        {
-            this.changes = new Dictionary<EntityId, EntityChange>();
         }
 
         private Patch(Dictionary<EntityId, EntityChange> initialChanges)
@@ -61,17 +60,10 @@ namespace LiteDB.Sync.Internal
         [JsonIgnore]
         public bool HasChanges => this.changes.Count > 0;
 
+        [JsonProperty]
+        public IEnumerable<EntityChange> Changes => this.changes.Select(x => x.Value);
+
         public string NextPatchId { get; set; }
-
-        public IEnumerator<EntityChange> GetEnumerator()
-        {
-            return this.changes.Select(x => x.Value).GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return this.GetEnumerator();
-        }
 
         internal void RemoveChange(EntityId id)
         {
