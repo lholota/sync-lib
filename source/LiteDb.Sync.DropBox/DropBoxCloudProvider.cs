@@ -1,38 +1,37 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Dropbox.Api;
 using LiteDB.Sync;
 
 namespace LiteDb.Sync.DropBox
 {
     public class DropBoxCloudProvider : ILiteSyncCloudProvider
     {
-        public void Initialize()
+        private readonly string clientId;
+
+        public DropBoxCloudProvider(string clientId)
         {
-            // Dropbox.Api.DropboxClient client = new DropboxClient();
-            throw new NotImplementedException();
+            this.clientId = clientId;
         }
 
-        public Task<HeadDownloadResult> DownloadHeadFile(CancellationToken ct)
+        public Task<Stream> DownloadInitFile(CancellationToken ct)
         {
-            throw new NotImplementedException();
+            throw new System.NotImplementedException();
         }
 
-        public Task UploadHeadFile(Stream contents, string etag, CancellationToken ct)
+        public Task UploadInitFile(Stream contents)
         {
-            throw new NotImplementedException();
+            throw new System.NotImplementedException();
         }
 
-        public Task<Stream> DownloadPatch(Guid id, CancellationToken ct)
+        public Task<Stream> DownloadPatchFile(string id, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            throw new System.NotImplementedException();
         }
 
-        public Task UploadPatch(Stream contents, Guid id, CancellationToken ct)
+        public Task UploadPatchFile(string id, Stream contents)
         {
-            throw new NotImplementedException();
+            throw new System.NotImplementedException();
         }
     }
 }

@@ -12,7 +12,7 @@ namespace LiteDB.Sync.Tests.TestUtils
             throw new NotImplementedException();
         }
 
-        public Task<HeadDownloadResult> DownloadHeadFile(CancellationToken ct)
+        public Task<HeadDownloadResult> DownloadInitFile(CancellationToken ct)
         {
             throw new NotImplementedException();
         }

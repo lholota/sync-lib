@@ -58,6 +58,8 @@ namespace LiteDB.Sync.Internal
 
         public bool HasChanges => this.changes.Count > 0;
 
+        public string NextPatchId { get; set; }
+
         public IEnumerator<EntityChange> GetEnumerator()
         {
             return this.changes.Select(x => x.Value).GetEnumerator();

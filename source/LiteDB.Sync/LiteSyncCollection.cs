@@ -59,12 +59,12 @@ namespace LiteDB.Sync
 
         public int Delete(Query query)
         {
-            return this.Delete(query, out IList<BsonValue> notRequired);
+            return this.Delete(query, out IList<BsonValue> _);
         }
 
         public int Delete(Expression<Func<T, bool>> predicate)
         {
-            return this.Delete(predicate, out IList<BsonValue> notRequired);
+            return this.Delete(predicate, out IList<BsonValue> _);
         }
 
         public int Delete(Query query, out IList<BsonValue> deletedIds)
@@ -117,7 +117,7 @@ namespace LiteDB.Sync
             return this.UnderlyingCollection.EnsureIndex(field, unique);
         }
 
-        public bool EnsureIndex<K>(Expression<Func<T, K>> property, bool unique = false)
+        public bool EnsureIndex<TProp>(Expression<Func<T, TProp>> property, bool unique = false)
         {
             return this.UnderlyingCollection.EnsureIndex(property, unique);
         }
@@ -167,7 +167,7 @@ namespace LiteDB.Sync
             return this.UnderlyingCollection.GetIndexes();
         }
 
-        public LiteCollection<T> Include<K>(Expression<Func<T, K>> dbref)
+        public LiteCollection<T> Include<TProp>(Expression<Func<T, TProp>> dbref)
         {
             return this.UnderlyingCollection.Include(dbref);
         }
@@ -275,7 +275,7 @@ namespace LiteDB.Sync
             return this.UnderlyingCollection.Max();
         }
 
-        public BsonValue Max<K>(Expression<Func<T, K>> property)
+        public BsonValue Max<TProp>(Expression<Func<T, TProp>> property)
         {
             return this.UnderlyingCollection.Max(property);
         }
@@ -290,7 +290,7 @@ namespace LiteDB.Sync
             return this.UnderlyingCollection.Min();
         }
 
-        public BsonValue Min<K>(Expression<Func<T, K>> property)
+        public BsonValue Min<TProp>(Expression<Func<T, TProp>> property)
         {
             return this.UnderlyingCollection.Min(property);
         }

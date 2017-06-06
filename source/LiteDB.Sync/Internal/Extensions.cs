@@ -18,9 +18,14 @@ namespace LiteDB.Sync.Internal
             return typeof(ILiteSyncEntity).IsAssignableFrom(type);
         }
 
-        internal static CloudState GetSyncHead(this ILiteDatabase db)
+        internal static CloudState GetLocalCloudState(this ILiteDatabase db)
         {
-            return db.GetCollection<CloudState>(LiteSyncDatabase.SyncStateCollectionName).FindById(LiteSyncDatabase.LocalHeadId);
+            return db.GetCollection<CloudState>(LiteSyncDatabase.SyncStateCollectionName).FindById(LiteSyncDatabase.LocalCloudStateId);
+        }
+
+        internal static void SaveLocalCloudState(this ILiteDatabase db, CloudState cloudState)
+        {
+            db.GetCollection<CloudState>(LiteSyncDatabase.SyncStateCollectionName).Upsert(LiteSyncDatabase.LocalCloudStateId, cloudState);
         }
     }
 }

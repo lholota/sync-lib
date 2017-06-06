@@ -8,6 +8,8 @@ namespace LiteDB.Sync
 {
     internal class LiteSynchronizer
     {
+        private const int MaxPushRetryCount = 5;
+
         private readonly LiteDatabase db;
         private readonly LiteSyncConfiguration config;
         private readonly ICloudClient cloudClient;
@@ -21,12 +23,10 @@ namespace LiteDB.Sync
 
         internal async Task Synchronize(CancellationToken ct)
         {
-            this.config.CloudProvider.Initialize();
-
-            var localHead = this.db.GetSyncHead();
+            var cloudState = this.db.GetLocalCloudState();
             ct.ThrowIfCancellationRequested();
 
-            var pull = await this.cloudClient.Pull(localHead, ct);
+            var pull = await this.cloudClient.Pull(cloudState, ct);
 
             using (this.db.Engine.Locker.Exclusive())
             {
@@ -37,21 +37,47 @@ namespace LiteDB.Sync
                     return;
                 }
 
-                this.ResolveConflicts(localChanges, pull.RemoteChanges, ct);
-
-                using (var tx = this.db.BeginTrans())
-                {
-                    this.ApplyChangesToLocalDb(pull.RemoteChanges);
-
-                    // new head identifier should be generated -> create a push request which would create the file payloads etc. automatically?
-                    await this.cloudClient.Push(localChanges, pull.Etag, ct);
-
-                    tx.Commit();
-                }
+                await this.DoConfictHandlingSync(ct, localChanges, pull, cloudState);
             }
         }
 
-        private void ApplyChangesToLocalDb(Patch remoteChanges)
+        private async Task DoConfictHandlingSync(CancellationToken ct, Patch localChanges, PullResult pull, CloudState cloudState)
+        {
+            var pushSuccessful = false;
+            var retryCounter = 0;
+
+            using (var tx = this.db.BeginTrans())
+            {
+                while (!pushSuccessful)
+                {
+                    this.ResolveConflicts(localChanges, pull.RemoteChanges, ct);
+
+                    this.ApplyChangesToLocalDb(pull.RemoteChanges);
+
+                    try
+                    {
+                        await this.cloudClient.Push(cloudState, localChanges, ct);
+
+                        pushSuccessful = true;
+                    }
+                    catch (LiteSyncConflictOccuredException ex)
+                    {
+                        if (retryCounter > MaxPushRetryCount)
+                        {
+                            throw new LiteSyncConflictRetryCountExceededException(MaxPushRetryCount, ex);
+                        }
+
+                        pull = await this.cloudClient.Pull(cloudState, ct);
+                        retryCounter++;
+                    }
+                }
+
+                this.db.SaveLocalCloudState(cloudState);
+                tx.Commit();
+            }
+        }
+
+        private void ApplyChangesToLocalDb(Patch remoteChanges) // TODO: Add ct?
         {
             var groupped = remoteChanges.GroupBy(x => x.EntityId.CollectionName, x => x);
 

@@ -1,25 +1,75 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using LiteDB.Sync.Exceptions;
 using LiteDB.Sync.Internal;
 
 namespace LiteDB.Sync
 {
-    public class LiteSyncDatabase : ILiteDatabase
+    public class LiteSyncDatabase : ILiteDatabase, ILiteSynchronizable
     {
-        internal const string LocalHeadId = "LocalHead";
+        internal const string LocalCloudStateId = "LocalHead";
         internal const string SyncStateCollectionName = "LiteSync_State";
         internal const string DeletedEntitiesCollectionName = "LiteSync_Deleted";
 
-        private readonly LiteDatabase db;
-        private readonly ILiteSyncService syncService;
+        private Task syncInProgressTask;
 
-        // TBA: Ctors according to the original ones
-        // TBA: Lite sync repository
-        public LiteSyncDatabase(ILiteSyncService syncService, LiteDatabase db)
+        private readonly LiteDatabase db;
+        private readonly LiteSyncConfiguration syncConfig;
+        private readonly ICloudClient cloudClient;
+        private readonly object syncControlLock = new object();
+
+        /// <summary>
+        /// Starts LiteDB database using a connection string for file system database
+        /// </summary>
+        public LiteSyncDatabase(LiteSyncConfiguration syncConfig, string connectionString, BsonMapper mapper = null)
+            : this(syncConfig, new LiteDatabase(connectionString, mapper), new Factory())
         {
-            this.syncService = syncService;
+        }
+
+        /// <summary>
+        /// Starts LiteDB database using a connection string for file system database
+        /// </summary>
+        public LiteSyncDatabase(LiteSyncConfiguration syncConfig, ConnectionString connectionString, BsonMapper mapper = null)
+            : this(syncConfig, new LiteDatabase(connectionString, mapper), new Factory())
+        {
+        }
+
+        /// <summary>
+        /// Starts LiteDB database using a Stream disk
+        /// </summary>
+        public LiteSyncDatabase(LiteSyncConfiguration syncConfig, Stream stream, BsonMapper mapper = null, string password = null)
+            : this(syncConfig, new LiteDatabase(stream, mapper, password), new Factory())
+        {
+        }
+
+        /// <summary>
+        /// Starts LiteDB database using a custom IDiskService with all parameters available
+        /// </summary>
+        /// <param name="syncConfig">Synchronization configuration</param>
+        /// <param name="diskService">Custom implementation of persist data layer</param>
+        /// <param name="mapper">Instance of BsonMapper that map poco classes to document</param>
+        /// <param name="password">Password to encrypt you datafile</param>
+        /// <param name="timeout">Locker timeout for concurrent access</param>
+        /// <param name="cacheSize">Max memory pages used before flush data in Journal file (when available)</param>
+        /// <param name="log">Custom log implementation</param>
+        public LiteSyncDatabase(LiteSyncConfiguration syncConfig, IDiskService diskService, BsonMapper mapper = null, string password = null, TimeSpan? timeout = null, int cacheSize = 5000, Logger log = null)
+            : this(syncConfig, new LiteDatabase(diskService, mapper, password, timeout, cacheSize, log), new Factory())
+        {
+        }
+
+        internal LiteSyncDatabase(LiteSyncConfiguration syncConfig, Stream stream, IFactory factory)
+            : this(syncConfig, new LiteDatabase(stream), factory)
+        {
+        }
+
+        private LiteSyncDatabase(LiteSyncConfiguration syncConfig, LiteDatabase db, IFactory factory)
+        {
+            this.cloudClient = factory.CreateCloudClient(syncConfig.CloudProvider);
+            this.syncConfig = syncConfig;
             this.db = db;
         }
 
@@ -30,6 +80,27 @@ namespace LiteDB.Sync
         public LiteEngine Engine => this.db.Engine;
 
         public LiteStorage FileStorage => this.db.FileStorage;
+
+        public IEnumerable<string> SyncedCollectionNames => this.syncConfig.SyncedCollections;
+
+        public Task SynchronizeAsync(CancellationToken ct)
+        {
+            lock (this.syncControlLock)
+            {
+                this.EnsureSyncIndices();
+
+                if (this.syncInProgressTask != null)
+                {
+                    return Task.FromResult(0);
+                }
+
+                var ctx = new LiteSynchronizer(this.db, this.syncConfig, this.cloudClient);
+
+                this.syncInProgressTask = ctx.Synchronize(ct);
+
+                return this.syncInProgressTask;
+            }
+        }
 
         public ILiteTransaction BeginTrans()
         {
@@ -91,6 +162,8 @@ namespace LiteDB.Sync
         public void Dispose()
         {
             this.db.Dispose();
+
+            // TBA: Dispose worker if it's created
         }
 
         internal ILiteCollection<DeletedEntity> GetDeletedEntitiesCollection()
@@ -100,7 +173,7 @@ namespace LiteDB.Sync
 
         private ILiteCollection<T> WrapCollectionIfRequired<T>(string name, ILiteCollection<T> nativeCollection, bool validateType = true)
         {
-            if (this.syncService.SyncedCollections.Contains(name, StringComparer.OrdinalIgnoreCase))
+            if (this.SyncedCollectionNames.Contains(name, StringComparer.OrdinalIgnoreCase))
             {
                 if (validateType && !typeof(T).IsSyncEntityType())
                 {
@@ -117,7 +190,7 @@ namespace LiteDB.Sync
         {
             using (var tx = this.db.BeginTrans())
             {
-                foreach (var collectionName in this.syncService.SyncedCollections)
+                foreach (var collectionName in this.SyncedCollectionNames)
                 {
                     var collection = this.db.GetCollection(collectionName);
                     collection.EnsureIndex(nameof(ILiteSyncEntity.RequiresSync));

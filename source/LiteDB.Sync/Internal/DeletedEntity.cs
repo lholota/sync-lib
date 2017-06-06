@@ -18,10 +18,7 @@
         }
 
         [BsonId]
-        public string Id
-        {
-            get => $"{this.CollectionName}_{this.EntityId}";
-        }
+        public string Id => $"{this.CollectionName}_{this.EntityId}";
 
         public string CollectionName { get; set; }
 

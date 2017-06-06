@@ -7,6 +7,6 @@ namespace LiteDB.Sync.Internal
     {
         Task<PullResult> Pull(CloudState localCloudState, CancellationToken ct);
 
-        Task Push(Patch patch, string etag, CancellationToken ct);
+        Task Push(CloudState localCloudState, Patch patch, CancellationToken ct);
     }
 }
