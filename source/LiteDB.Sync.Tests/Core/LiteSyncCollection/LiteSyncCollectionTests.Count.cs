@@ -1,7 +1,7 @@
 ﻿using LiteDB.Sync.Tests.TestUtils;
 using NUnit.Framework;
 
-namespace LiteDB.Sync.Tests.Unit.LiteSyncCollection
+namespace LiteDB.Sync.Tests.Core.LiteSyncCollection
 {
     public partial class LiteSyncCollectionTests
     {

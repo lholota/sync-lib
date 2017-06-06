@@ -1,9 +1,11 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using LiteDB.Sync.Internal;
 using LiteDB.Sync.Tests.TestUtils;
+using Newtonsoft.Json;
 using NUnit.Framework;
 
-namespace LiteDB.Sync.Tests.Unit.Internal
+namespace LiteDB.Sync.Tests.Core.Internal
 {
     [TestFixture]
     public class PatchTests
@@ -17,8 +19,10 @@ namespace LiteDB.Sync.Tests.Unit.Internal
             {
                 var expected = CreateSamplePatch();
 
-                var serialized = BsonMapper.Global.ToDocument(expected);
-                var actual = BsonMapper.Global.ToObject<Patch>(serialized);
+                var serialized = JsonConvert.SerializeObject(expected, JsonSerialization.Settings);
+                Console.WriteLine(serialized);
+
+                var actual = JsonConvert.DeserializeObject<Patch>(serialized, JsonSerialization.Settings);
 
                 Assert.IsNotNull(actual);
 
@@ -48,6 +52,7 @@ namespace LiteDB.Sync.Tests.Unit.Internal
                 var docs = new[]
                 {
                     GetDocument(123, "AAA")
+                    // TBA: Document with complex unknown id type
                 };
 
                 patch.AddChanges(CollectionName, docs);
@@ -75,7 +80,7 @@ namespace LiteDB.Sync.Tests.Unit.Internal
 
                 var change = patch.Single();
 
-                Assert.AreEqual(123, change.EntityId.Id.AsInt32);
+                Assert.AreEqual(123, change.EntityId.Id);
                 Assert.AreEqual(CollectionName, change.EntityId.CollectionName);
 
                 Assert.AreEqual(EntityChangeType.Upsert, change.ChangeType);
@@ -88,11 +93,11 @@ namespace LiteDB.Sync.Tests.Unit.Internal
                 var deletedEntity = new DeletedEntity(CollectionName, 123);
 
                 var patch = new Patch();
-                patch.AddDeletes(new []{ deletedEntity });
+                patch.AddDeletes(new[] { deletedEntity });
 
                 var change = patch.Single();
 
-                Assert.AreEqual(123, change.EntityId.Id.AsInt32);
+                Assert.AreEqual(123, change.EntityId.Id);
                 Assert.AreEqual(CollectionName, change.EntityId.CollectionName);
 
                 Assert.AreEqual(EntityChangeType.Delete, change.ChangeType);
@@ -118,7 +123,7 @@ namespace LiteDB.Sync.Tests.Unit.Internal
                 var change = combined.Single();
 
                 Assert.AreEqual(EntityChangeType.Upsert, change.ChangeType);
-                Assert.AreEqual(123, change.EntityId.Id.AsInt32);
+                Assert.AreEqual(123, change.EntityId.Id);
 
                 BsonValue actualStringPropValue;
                 change.Entity.TryGetValue(nameof(TestEntity.Text), out actualStringPropValue);
@@ -143,7 +148,7 @@ namespace LiteDB.Sync.Tests.Unit.Internal
                 var change = combined.Single();
 
                 Assert.AreEqual(EntityChangeType.Delete, change.ChangeType);
-                Assert.AreEqual(123, change.EntityId.Id.AsInt32);
+                Assert.AreEqual(123, change.EntityId.Id);
             }
 
             [Test]
@@ -162,7 +167,7 @@ namespace LiteDB.Sync.Tests.Unit.Internal
                 var change = combined.Single();
 
                 Assert.AreEqual(EntityChangeType.Upsert, change.ChangeType);
-                Assert.AreEqual(123, change.EntityId.Id.AsInt32);
+                Assert.AreEqual(123, change.EntityId.Id);
             }
 
             [Test]
@@ -192,13 +197,13 @@ namespace LiteDB.Sync.Tests.Unit.Internal
 
                     var bsonDoc = BsonMapper.Global.ToDocument(entity);
 
-                    result.AddChanges(collectionName ?? CollectionName, new []{ bsonDoc });
+                    result.AddChanges(collectionName ?? CollectionName, new[] { bsonDoc });
                 }
                 else
                 {
                     var deletedEntity = new DeletedEntity(collectionName ?? CollectionName, 123);
 
-                    result.AddDeletes(new []{deletedEntity});
+                    result.AddDeletes(new[] { deletedEntity });
                 }
 
                 return result;

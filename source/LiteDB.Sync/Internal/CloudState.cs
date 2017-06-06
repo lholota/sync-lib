@@ -3,7 +3,8 @@
     internal class CloudState
     {
         public CloudState()
-        { }
+        {
+        }
 
         public CloudState(string nextPatchId)
         {

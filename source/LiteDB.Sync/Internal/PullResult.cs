@@ -11,9 +11,20 @@ namespace LiteDB.Sync.Internal
             this.CloudState = cloudState;
         }
 
+        public PullResult(CloudState cloudState)
+        {
+            this.CloudState = cloudState;
+        }
+
+        public PullResult()
+        {
+        }
+
         public Patch RemoteChanges { get; }
 
         public CloudState CloudState { get; }
+
+        public bool CloudStateChanged => this.CloudState != null;
 
         public bool HasChanges => this.RemoteChanges != null && this.RemoteChanges.Any();
 

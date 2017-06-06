@@ -1,7 +1,8 @@
-﻿namespace LiteDB.Sync.Tests.TestUtils {
-    public class NonSyncableTestEntity
+﻿namespace LiteDB.Sync.Tests.Tools.Entities
+{
+    public class NonSyncTestEntity
     {
-        public NonSyncableTestEntity(int id)
+        public NonSyncTestEntity(int id)
         {
             this.Id = id;
         }

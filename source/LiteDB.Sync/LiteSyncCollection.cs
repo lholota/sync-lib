@@ -187,7 +187,7 @@ namespace LiteDB.Sync
 
                 result = this.UnderlyingCollection.Insert(document);
 
-                var deletedEntityId = DeletedEntity.CreateId(this.Name, result);
+                var deletedEntityId = EntityId.GetEntityIdString(this.Name, result);
                 this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
 
                 tx.Commit();
@@ -204,7 +204,7 @@ namespace LiteDB.Sync
 
                 this.UnderlyingCollection.Insert(id, document);
 
-                var deletedEntityId = DeletedEntity.CreateId(this.Name, id);
+                var deletedEntityId = EntityId.GetEntityIdString(this.Name, id);
                 this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
 
                 tx.Commit();
@@ -242,7 +242,7 @@ namespace LiteDB.Sync
 
                 foreach (var doc in batch)
                 {
-                    var deletedEntityId = DeletedEntity.CreateId(this.Name, doc["_id"]);
+                    var deletedEntityId = EntityId.GetEntityIdString(this.Name, doc["_id"]);
                     coll.Delete(deletedEntityId);
                 }
 
@@ -329,7 +329,7 @@ namespace LiteDB.Sync
                 if (result)
                 {
                     var id = this.database.Mapper.GetEntityId(entity);
-                    var deletedEntityId = DeletedEntity.CreateId(this.Name, id);
+                    var deletedEntityId = EntityId.GetEntityIdString(this.Name, id);
 
                     this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
                 }
@@ -352,7 +352,7 @@ namespace LiteDB.Sync
 
                 if (result)
                 {
-                    var deletedEntityId = DeletedEntity.CreateId(this.Name, id);
+                    var deletedEntityId = EntityId.GetEntityIdString(this.Name, id);
 
                     this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
                 }
@@ -380,7 +380,7 @@ namespace LiteDB.Sync
                     foreach (var entity in entities)
                     {
                         var id = this.database.Mapper.GetEntityId(entity);
-                        var deletedEntityId = DeletedEntity.CreateId(this.Name, id);
+                        var deletedEntityId = EntityId.GetEntityIdString(this.Name, id);
 
                         deletedEntCollection.Delete(deletedEntityId);
                     }
@@ -399,7 +399,7 @@ namespace LiteDB.Sync
             foreach (var doc in docs)
             {
                 var docId = this.database.Mapper.GetEntityId(doc);
-                var deletedEntityId = DeletedEntity.CreateId(this.Name, docId);
+                var deletedEntityId = EntityId.GetEntityIdString(this.Name, docId);
 
                 deletedEntCollection.Delete(deletedEntityId);
             }

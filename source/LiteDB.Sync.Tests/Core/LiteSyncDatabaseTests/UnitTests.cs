@@ -1,21 +1,21 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using LiteDB.Sync.Exceptions;
 using LiteDB.Sync.Internal;
 using LiteDB.Sync.Tests.TestUtils;
+using LiteDB.Sync.Tests.Tools.Entities;
 using Moq;
 using NUnit.Framework;
-using NUnit.Framework.Internal;
 
-namespace LiteDB.Sync.Tests.Unit
+namespace LiteDB.Sync.Tests.Core.LiteSyncDatabaseTests
 {
     [TestFixture]
-    public class LiteSyncDatabaseTests
+    public class UnitTests
     {
         protected MemoryStream DbStream;
-        protected LiteDatabase InnerDb;
         protected LiteSyncDatabase SyncDatabase;
-        protected Mock<ILiteSyncService> ServiceMock;
+        protected Mock<ILiteSyncConfiguration> SyncConfigMock;
 
         // TBA: Ensure indices - lazilly on any operation
 
@@ -23,11 +23,9 @@ namespace LiteDB.Sync.Tests.Unit
         public void Setup()
         {
             this.DbStream = new MemoryStream();
-            this.InnerDb = new LiteDatabase(this.DbStream);
+            this.SyncConfigMock = new Mock<ILiteSyncConfiguration>();
 
-            this.ServiceMock = new Mock<ILiteSyncService>();
-
-            this.SyncDatabase = new LiteSyncDatabase(this.ServiceMock.Object, this.InnerDb);
+            this.SyncDatabase = new LiteSyncDatabase(this.SyncConfigMock.Object, this.DbStream);
         }
 
         [TearDown]
@@ -37,12 +35,12 @@ namespace LiteDB.Sync.Tests.Unit
             this.DbStream.Dispose();
         }
 
-        public class WhenGettingCollectionByType : LiteSyncDatabaseTests
+        public class WhenGettingCollectionByType : UnitTests
         {
             [Test]
             public void ShouldReturnNativeCollectionIfNotSynced()
             {
-                this.ServiceMock.SetupGet(x => x.SyncedCollections).Returns(new string[0]);
+                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new string[0]);
 
                 var collection = this.SyncDatabase.GetCollection<TestEntity>();
                 
@@ -53,7 +51,7 @@ namespace LiteDB.Sync.Tests.Unit
             [Test]
             public void ShouldReturnSyncCollectionIfSynced()
             {
-                this.ServiceMock.SetupGet(x => x.SyncedCollections).Returns(new[]{ nameof(TestEntity) });
+                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[]{ nameof(TestEntity) });
 
                 var collection = this.SyncDatabase.GetCollection<TestEntity>();
 
@@ -64,31 +62,20 @@ namespace LiteDB.Sync.Tests.Unit
             [Test]
             public void ShouldThrowIfRegisteredAsSyncButTypeDoesNotImplementInterface()
             {
-                this.ServiceMock.SetupGet(x => x.SyncedCollections).Returns(new[] { nameof(NonSyncableTestEntity) });
+                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[] { nameof(NonSyncTestEntity) });
 
-                Assert.Throws<LiteSyncInvalidEntityException>(() => this.SyncDatabase.GetCollection<NonSyncableTestEntity>());
-            }
-
-            [Test]
-            public void ShouldCreateSyncIndices()
-            {
-                this.ServiceMock.SetupGet(x => x.SyncedCollections).Returns(new[] { nameof(TestEntity) });
-                var collection = this.SyncDatabase.GetCollection<TestEntity>();
-
-                var indices = collection.GetIndexes();
-
-                Assert.IsTrue(indices.Any(x => x.Field == nameof(ILiteSyncEntity.RequiresSync)));
+                Assert.Throws<LiteSyncInvalidEntityException>(() => this.SyncDatabase.GetCollection<NonSyncTestEntity>());
             }
         }
 
-        public class WhenGettingCollectionByTypeAndName : LiteSyncDatabaseTests
+        public class WhenGettingCollectionByTypeAndName : UnitTests
         {
             private const string CollectionName = "Explicit";
 
             [Test]
             public void ShouldReturnNativeCollectionIfNotSynced()
             {
-                this.ServiceMock.SetupGet(x => x.SyncedCollections).Returns(new string[0]);
+                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new string[0]);
 
                 var collection = this.SyncDatabase.GetCollection<TestEntity>(CollectionName);
 
@@ -99,7 +86,7 @@ namespace LiteDB.Sync.Tests.Unit
             [Test]
             public void ShouldReturnSyncCollectionIfSynced()
             {
-                this.ServiceMock.SetupGet(x => x.SyncedCollections).Returns(new[] { CollectionName });
+                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[] { CollectionName });
 
                 var collection = this.SyncDatabase.GetCollection<TestEntity>(CollectionName);
 
@@ -110,20 +97,20 @@ namespace LiteDB.Sync.Tests.Unit
             [Test]
             public void ShouldThrowIfRegisteredAsSyncButTypeDoesNotImplementInterface()
             {
-                this.ServiceMock.SetupGet(x => x.SyncedCollections).Returns(new[] { CollectionName });
+                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[] { CollectionName });
 
-                Assert.Throws<LiteSyncInvalidEntityException>(() => this.SyncDatabase.GetCollection<NonSyncableTestEntity>(CollectionName));
+                Assert.Throws<LiteSyncInvalidEntityException>(() => this.SyncDatabase.GetCollection<NonSyncTestEntity>(CollectionName));
             }
         }
 
-        public class WhenGettingBsonDocCollection : LiteSyncDatabaseTests
+        public class WhenGettingBsonDocCollection : UnitTests
         {
             private const string CollectionName = "Explicit";
 
             [Test]
             public void ShouldReturnNativeCollectionIfNotSynced()
             {
-                this.ServiceMock.SetupGet(x => x.SyncedCollections).Returns(new string[0]);
+                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new string[0]);
 
                 var collection = this.SyncDatabase.GetCollection(CollectionName);
 
@@ -134,7 +121,7 @@ namespace LiteDB.Sync.Tests.Unit
             [Test]
             public void ShouldReturnSyncCollectionIfSynced()
             {
-                this.ServiceMock.SetupGet(x => x.SyncedCollections).Returns(new[] { CollectionName });
+                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[] { CollectionName });
 
                 var collection = this.SyncDatabase.GetCollection(CollectionName);
 
@@ -143,7 +130,7 @@ namespace LiteDB.Sync.Tests.Unit
             }
         }
 
-        public class WhenGettingDeletedEntitiesCollection : LiteSyncDatabaseTests
+        public class WhenGettingDeletedEntitiesCollection : UnitTests
         {
             [Test]
             public void CollectionShouldHaveCorrectName()
@@ -152,6 +139,15 @@ namespace LiteDB.Sync.Tests.Unit
 
                 Assert.IsInstanceOf<LiteCollection<DeletedEntity>>(collection);
                 Assert.AreEqual(collection.Name, LiteSyncDatabase.DeletedEntitiesCollectionName);
+            }
+        }
+
+        public class WhenSynchronizing : UnitTests
+        {
+            [Test]
+            public void Placeholder()
+            {
+                throw new NotImplementedException();
             }
         }
     }

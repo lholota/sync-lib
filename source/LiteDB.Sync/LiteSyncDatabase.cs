@@ -18,14 +18,14 @@ namespace LiteDB.Sync
         private Task syncInProgressTask;
 
         private readonly LiteDatabase db;
-        private readonly LiteSyncConfiguration syncConfig;
+        private readonly ILiteSyncConfiguration syncConfig;
         private readonly ICloudClient cloudClient;
         private readonly object syncControlLock = new object();
 
         /// <summary>
         /// Starts LiteDB database using a connection string for file system database
         /// </summary>
-        public LiteSyncDatabase(LiteSyncConfiguration syncConfig, string connectionString, BsonMapper mapper = null)
+        public LiteSyncDatabase(ILiteSyncConfiguration syncConfig, string connectionString, BsonMapper mapper = null)
             : this(syncConfig, new LiteDatabase(connectionString, mapper), new Factory())
         {
         }
@@ -33,7 +33,7 @@ namespace LiteDB.Sync
         /// <summary>
         /// Starts LiteDB database using a connection string for file system database
         /// </summary>
-        public LiteSyncDatabase(LiteSyncConfiguration syncConfig, ConnectionString connectionString, BsonMapper mapper = null)
+        public LiteSyncDatabase(ILiteSyncConfiguration syncConfig, ConnectionString connectionString, BsonMapper mapper = null)
             : this(syncConfig, new LiteDatabase(connectionString, mapper), new Factory())
         {
         }
@@ -41,7 +41,7 @@ namespace LiteDB.Sync
         /// <summary>
         /// Starts LiteDB database using a Stream disk
         /// </summary>
-        public LiteSyncDatabase(LiteSyncConfiguration syncConfig, Stream stream, BsonMapper mapper = null, string password = null)
+        public LiteSyncDatabase(ILiteSyncConfiguration syncConfig, Stream stream, BsonMapper mapper = null, string password = null)
             : this(syncConfig, new LiteDatabase(stream, mapper, password), new Factory())
         {
         }
@@ -56,17 +56,17 @@ namespace LiteDB.Sync
         /// <param name="timeout">Locker timeout for concurrent access</param>
         /// <param name="cacheSize">Max memory pages used before flush data in Journal file (when available)</param>
         /// <param name="log">Custom log implementation</param>
-        public LiteSyncDatabase(LiteSyncConfiguration syncConfig, IDiskService diskService, BsonMapper mapper = null, string password = null, TimeSpan? timeout = null, int cacheSize = 5000, Logger log = null)
+        public LiteSyncDatabase(ILiteSyncConfiguration syncConfig, IDiskService diskService, BsonMapper mapper = null, string password = null, TimeSpan? timeout = null, int cacheSize = 5000, Logger log = null)
             : this(syncConfig, new LiteDatabase(diskService, mapper, password, timeout, cacheSize, log), new Factory())
         {
         }
 
-        internal LiteSyncDatabase(LiteSyncConfiguration syncConfig, Stream stream, IFactory factory)
+        internal LiteSyncDatabase(ILiteSyncConfiguration syncConfig, Stream stream, IFactory factory)
             : this(syncConfig, new LiteDatabase(stream), factory)
         {
         }
 
-        private LiteSyncDatabase(LiteSyncConfiguration syncConfig, LiteDatabase db, IFactory factory)
+        private LiteSyncDatabase(ILiteSyncConfiguration syncConfig, LiteDatabase db, IFactory factory)
         {
             this.cloudClient = factory.CreateCloudClient(syncConfig.CloudProvider);
             this.syncConfig = syncConfig;

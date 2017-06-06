@@ -11,10 +11,10 @@ namespace LiteDB.Sync
         private const int MaxPushRetryCount = 5;
 
         private readonly LiteDatabase db;
-        private readonly LiteSyncConfiguration config;
+        private readonly ILiteSyncConfiguration config;
         private readonly ICloudClient cloudClient;
 
-        internal LiteSynchronizer(LiteDatabase db, LiteSyncConfiguration config, ICloudClient cloudClient)
+        internal LiteSynchronizer(LiteDatabase db, ILiteSyncConfiguration config, ICloudClient cloudClient)
         {
             this.cloudClient = cloudClient;
             this.config = config;
@@ -32,8 +32,13 @@ namespace LiteDB.Sync
             {
                 var localChanges = this.GetLocalChanges(ct);
 
-                if (!pull.RemoteChanges.HasChanges && !localChanges.HasChanges)
+                if (!pull.HasChanges && !localChanges.HasChanges)
                 {
+                    if (pull.CloudStateChanged)
+                    {
+                        this.db.SaveLocalCloudState(pull.CloudState);
+                    }
+
                     return;
                 }
 

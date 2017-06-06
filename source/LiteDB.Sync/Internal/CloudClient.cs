@@ -19,21 +19,27 @@ namespace LiteDB.Sync.Internal
             this.serializer = new Newtonsoft.Json.JsonSerializer();
         }
 
-        public async Task<PullResult> Pull(CloudState localCloudState, CancellationToken ct)
+        public async Task<PullResult> Pull(CloudState originalState, CancellationToken ct)
         {
-            if (localCloudState == null)
-            {
-                localCloudState = await this.GetLocalCloudState(ct);
-            }
+            var localState = originalState ?? await this.GetLocalCloudState(ct);
 
-            var patches = await this.DownloadPatches(localCloudState.NextPatchId, ct);
+            var patches = await this.DownloadPatches(localState.NextPatchId, ct);
 
             if (patches.Count > 0)
             {
-                localCloudState.NextPatchId = patches[patches.Count - 1].NextPatchId;
+                var nextPatchId = patches[patches.Count - 1].NextPatchId;
+                var newCloudState = new CloudState(nextPatchId);
+
+                return new PullResult(patches, newCloudState);
             }
 
-            return new PullResult(patches, localCloudState);
+            if (originalState == null)
+            {
+                // Initial cloud state was downloaded
+                return new PullResult(localState);
+            }
+
+            return new PullResult();
         }
 
         public async Task Push(CloudState localCloudState, Patch patch, CancellationToken ct)
@@ -67,12 +73,15 @@ namespace LiteDB.Sync.Internal
                 using (var writer = new StreamWriter(ms))
                 {
                     this.serializer.Serialize(writer, cloudState);
+                    await writer.FlushAsync();
 
                     ms.Position = 0;
 
                     try
                     {
                         await this.provider.UploadInitFile(ms);
+
+                        return cloudState;
                     }
                     catch (LiteSyncConflictOccuredException)
                     {

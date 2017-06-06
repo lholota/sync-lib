@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace LiteDB.Sync.Internal
 {
@@ -39,7 +40,8 @@ namespace LiteDB.Sync.Internal
 
         private readonly Dictionary<EntityId, EntityChange> changes;
 
-        public Patch(IEnumerable<EntityChange> initialChanges)
+        [JsonConstructor]
+        internal Patch(IEnumerable<EntityChange> initialChanges)
         {
             this.changes = initialChanges.ToDictionary(
                 x => x.EntityId,
@@ -56,6 +58,7 @@ namespace LiteDB.Sync.Internal
             this.changes = initialChanges;
         }
 
+        [JsonIgnore]
         public bool HasChanges => this.changes.Count > 0;
 
         public string NextPatchId { get; set; }
@@ -89,7 +92,8 @@ namespace LiteDB.Sync.Internal
 
             foreach (var bsonDoc in dirtyEntities)
             {
-                var change = new EntityChange(collectionName, bsonDoc["_id"], EntityChangeType.Upsert, bsonDoc);
+                var entityId = new EntityId(collectionName, bsonDoc["_id"]);
+                var change = new EntityChange(entityId, EntityChangeType.Upsert, bsonDoc);
                 this.changes.Add(change.EntityId, change);
             }
         }
@@ -103,7 +107,7 @@ namespace LiteDB.Sync.Internal
 
             foreach (var deleted in deletedEntities)
             {
-                var change = new EntityChange(deleted.CollectionName, deleted.EntityId, EntityChangeType.Delete, null);
+                var change = new EntityChange(deleted.EntityId);
                 this.changes.Add(change.EntityId, change);
             }
         }

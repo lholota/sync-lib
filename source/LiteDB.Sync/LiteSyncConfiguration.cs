@@ -2,7 +2,7 @@
 
 namespace LiteDB.Sync
 {
-    public class LiteSyncConfiguration
+    public class LiteSyncConfiguration : ILiteSyncConfiguration
     {
         public LiteSyncConfiguration(
             ILiteSyncCloudProvider cloudProvider, 
