@@ -187,8 +187,8 @@ namespace LiteDB.Sync
 
                 result = this.UnderlyingCollection.Insert(document);
 
-                var deletedEntityId = EntityId.GetEntityIdString(this.Name, result);
-                this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
+                var deletedEntityId = new EntityId(this.Name, result);
+                this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId.ToString());
 
                 tx.Commit();
             }

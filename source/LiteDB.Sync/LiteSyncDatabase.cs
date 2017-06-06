@@ -16,8 +16,7 @@ namespace LiteDB.Sync
         internal const string DeletedEntitiesCollectionName = "LiteSync_Deleted";
 
         private Task syncInProgressTask;
-
-        private readonly LiteDatabase db;
+        
         private readonly ILiteSyncConfiguration syncConfig;
         private readonly ICloudClient cloudClient;
         private readonly object syncControlLock = new object();
@@ -70,16 +69,18 @@ namespace LiteDB.Sync
         {
             this.cloudClient = factory.CreateCloudClient(syncConfig.CloudProvider);
             this.syncConfig = syncConfig;
-            this.db = db;
+            this.InnerDb = db;
         }
 
-        public Logger Log => this.db.Log;
+        public Logger Log => this.InnerDb.Log;
 
-        public BsonMapper Mapper => this.db.Mapper;
+        public BsonMapper Mapper => this.InnerDb.Mapper;
 
-        public LiteEngine Engine => this.db.Engine;
+        public LiteEngine Engine => this.InnerDb.Engine;
 
-        public LiteStorage FileStorage => this.db.FileStorage;
+        public LiteStorage FileStorage => this.InnerDb.FileStorage;
+
+        internal LiteDatabase InnerDb { get; }
 
         public IEnumerable<string> SyncedCollectionNames => this.syncConfig.SyncedCollections;
 
@@ -94,7 +95,7 @@ namespace LiteDB.Sync
                     return Task.FromResult(0);
                 }
 
-                var ctx = new LiteSynchronizer(this.db, this.syncConfig, this.cloudClient);
+                var ctx = new LiteSynchronizer(this.InnerDb, this.syncConfig, this.cloudClient);
 
                 this.syncInProgressTask = ctx.Synchronize(ct);
 
@@ -104,19 +105,19 @@ namespace LiteDB.Sync
 
         public ILiteTransaction BeginTrans()
         {
-            return this.db.BeginTrans();
+            return this.InnerDb.BeginTrans();
         }
 
         public ILiteCollection<T> GetCollection<T>(string name)
         {
-            var nativeCollection = this.db.GetCollection<T>(name);
+            var nativeCollection = this.InnerDb.GetCollection<T>(name);
 
             return this.WrapCollectionIfRequired(name, nativeCollection);
         }
 
         public ILiteCollection<T> GetCollection<T>()
         {
-            var nativeCollection = this.db.GetCollection<T>();
+            var nativeCollection = this.InnerDb.GetCollection<T>();
             var name = BsonMapper.Global.ResolveCollectionName.Invoke(typeof(T));
 
             return this.WrapCollectionIfRequired(name, nativeCollection);
@@ -124,51 +125,51 @@ namespace LiteDB.Sync
 
         public ILiteCollection<BsonDocument> GetCollection(string name)
         {
-            var nativeCollection = this.db.GetCollection(name);
+            var nativeCollection = this.InnerDb.GetCollection(name);
 
             return this.WrapCollectionIfRequired(name, nativeCollection, false);
         }
 
         public IEnumerable<string> GetCollectionNames()
         {
-            return this.db.GetCollectionNames();
+            return this.InnerDb.GetCollectionNames();
         }
 
         public bool CollectionExists(string name)
         {
-            return this.db.CollectionExists(name);
+            return this.InnerDb.CollectionExists(name);
         }
 
         public bool DropCollection(string name)
         {
-            return this.db.DropCollection(name);
+            return this.InnerDb.DropCollection(name);
         }
 
         public bool RenameCollection(string oldName, string newName)
         {
-            return this.db.RenameCollection(oldName, newName);
+            return this.InnerDb.RenameCollection(oldName, newName);
         }
 
         public long Shrink()
         {
-            return this.db.Shrink();
+            return this.InnerDb.Shrink();
         }
 
         public long Shrink(string password)
         {
-            return this.db.Shrink(password);
+            return this.InnerDb.Shrink(password);
         }
 
         public void Dispose()
         {
-            this.db.Dispose();
+            this.InnerDb.Dispose();
 
             // TBA: Dispose worker if it's created
         }
 
         internal ILiteCollection<DeletedEntity> GetDeletedEntitiesCollection()
         {
-            return this.db.GetCollection<DeletedEntity>(DeletedEntitiesCollectionName);
+            return this.InnerDb.GetCollection<DeletedEntity>(DeletedEntitiesCollectionName);
         }
 
         private ILiteCollection<T> WrapCollectionIfRequired<T>(string name, ILiteCollection<T> nativeCollection, bool validateType = true)
@@ -188,11 +189,11 @@ namespace LiteDB.Sync
 
         private void EnsureSyncIndices()
         {
-            using (var tx = this.db.BeginTrans())
+            using (var tx = this.InnerDb.BeginTrans())
             {
                 foreach (var collectionName in this.SyncedCollectionNames)
                 {
-                    var collection = this.db.GetCollection(collectionName);
+                    var collection = this.InnerDb.GetCollection(collectionName);
                     collection.EnsureIndex(nameof(ILiteSyncEntity.RequiresSync));
                 }
 

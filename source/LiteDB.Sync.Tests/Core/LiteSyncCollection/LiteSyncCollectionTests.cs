@@ -12,7 +12,6 @@ namespace LiteDB.Sync.Tests.Core.LiteSyncCollection
         private const string CollectionName = "SyncedCollection";
 
         protected MemoryStream DbStream;
-        protected LiteDatabase InnerDb;
         protected LiteSyncDatabase Db;
         protected LiteSyncConfiguration SyncConfig;
         protected ILiteCollection<TestEntity> SyncedCollection;
@@ -27,7 +26,7 @@ namespace LiteDB.Sync.Tests.Core.LiteSyncCollection
             this.Db = new LiteSyncDatabase(this.SyncConfig, this.DbStream);
 
             this.SyncedCollection = this.Db.GetCollection<TestEntity>(CollectionName);
-            this.NativeCollection = this.InnerDb.GetCollection<TestEntity>(CollectionName);
+            this.NativeCollection = this.Db.InnerDb.GetCollection<TestEntity>(CollectionName);
 
             Assert.IsInstanceOf<LiteSyncCollection<TestEntity>>(this.SyncedCollection);
         }
