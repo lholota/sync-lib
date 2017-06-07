@@ -52,6 +52,8 @@ namespace LiteDB.Sync.Internal
             using(var writer = new StreamWriter(ms))
             {
                 this.serializer.Serialize(writer, patch);
+
+                await writer.FlushAsync();
                 ms.Position = 0;
 
                 await this.provider.UploadPatchFile(localCloudState.NextPatchId, ms);

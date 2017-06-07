@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB.Sync.Exceptions;
@@ -13,15 +15,9 @@ namespace LiteDB.Sync.Tests.Core.Internal
     [TestFixture]
     public class CloudClientTests
     {
-        /*
-             * No local cloud state
-             * - create -> conflict - other client created it first
-             
-             * One patch
-             * Multiple patches
-             */
+        protected const string EntityPropKey = "Key";
 
-        public abstract class WhenPulling<TProvider> : CloudClientTests 
+        public abstract class WhenPulling<TProvider> : CloudClientTests
             where TProvider : class, ILiteSyncCloudProvider
         {
             private CloudClient cloudClient;
@@ -46,6 +42,26 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
                 this.AssertPullResultHasState(pullResult);
                 Assert.AreEqual("NextPatchId", pullResult.CloudState.NextPatchId);
+
+                this.providerMock.VerifyAll();
+            }
+
+            [Test]
+            public async Task WithNoStateShouldReturnExistingRemoteStateAndDownloadPatches()
+            {
+                var remoteState = new CloudState("Patch1");
+                var remotePatch = this.CreatePatch("Patch2");
+
+                this.providerMock.Setup(x => x.DownloadInitFile(It.IsAny<CancellationToken>())).ReturnsAsync(this.CreateJsonStream(remoteState));
+                this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("Patch1"), It.IsAny<CancellationToken>())).ReturnsAsync(this.CreateJsonStream(remotePatch));
+                this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("Patch2"), It.IsAny<CancellationToken>())).ReturnsAsync((Stream)null);
+
+                var pullResult = await this.cloudClient.Pull(null, CancellationToken.None);
+
+                this.AssertPullResultHasState(pullResult);
+                Assert.AreEqual("Patch2", pullResult.CloudState.NextPatchId);
+
+                Assert.IsNotNull(pullResult.RemotePatch);
 
                 this.providerMock.VerifyAll();
             }
@@ -129,6 +145,30 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 this.providerMock.VerifyAll();
             }
 
+            [Test]
+            public async Task WithStateShouldDownloadMultiplePatches()
+            {
+                var localState = new CloudState("Patch1");
+                var remotePatch1 = this.CreatePatch("Patch2", "Value2");
+                var remotePatch2 = this.CreatePatch("Patch3", "Value3");
+
+                this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("Patch1"), It.IsAny<CancellationToken>())).ReturnsAsync(this.CreateJsonStream(remotePatch1));
+                this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("Patch2"), It.IsAny<CancellationToken>())).ReturnsAsync(this.CreateJsonStream(remotePatch2));
+                this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("Patch3"), It.IsAny<CancellationToken>())).ReturnsAsync((Stream)null);
+
+                var pullResult = await this.cloudClient.Pull(localState, CancellationToken.None);
+
+                Assert.IsNotNull(pullResult);
+
+                Assert.IsTrue(pullResult.CloudStateChanged);
+                Assert.AreEqual("Patch3", pullResult.CloudState.NextPatchId);
+
+                Assert.IsTrue(pullResult.HasChanges);
+                Assert.AreEqual("Value3", pullResult.RemotePatch.Changes.Single().RawValues[EntityPropKey]);
+
+                this.providerMock.VerifyAll();
+            }
+
             protected virtual void SetupGeneratePatchId(Mock<TProvider> mock) { }
 
             protected abstract bool IsPatchIdValid(string patchId);
@@ -169,24 +209,89 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 this.providerMock = new Mock<TProvider>();
                 this.cloudClient = new CloudClient(this.providerMock.Object);
             }
+
+            [Test]
+            public async Task ShouldPushChangeSuccessfully()
+            {
+                this.providerMock
+                    .Setup(x => x.UploadPatchFile("Patch1", It.IsAny<Stream>()))
+                    .Callback<string, Stream>((fileNamePatchId, stream) =>
+                    {
+                        var deserializedPatch = this.DeserializeFromStream<Patch>(stream);
+                        this.IsPatchIdValid(deserializedPatch.NextPatchId);
+                        this.IsPatchIdValid(fileNamePatchId);
+                    })
+                    .Returns(Task.FromResult(0));
+
+                var cloudState = new CloudState("Patch1");
+                var patch = this.CreatePatch(null);
+
+                await this.cloudClient.Push(cloudState, patch, CancellationToken.None);
+
+                this.IsPatchIdValid(cloudState.NextPatchId);
+            }
+
+            [Test]
+            public void ShouldThrowIfConflictOccurs()
+            {
+                this.providerMock
+                    .Setup(x => x.UploadPatchFile("Patch1", It.IsAny<Stream>()))
+                    .Throws(new LiteSyncConflictOccuredException());
+
+                var cloudState = new CloudState("Patch1");
+                var patch = this.CreatePatch(null);
+
+                var ex = Assert.Throws<AggregateException>(() => this.cloudClient.Push(cloudState, patch, CancellationToken.None).Wait());
+
+                ex = ex.Flatten();
+                Assert.IsInstanceOf<LiteSyncConflictOccuredException>(ex.InnerExceptions.Single());
+            }
+
+            /*
+             * Conflict - patch already exists
+             * 
+             * 
+             * Problem - upload succeeds, but local transaction is not commited
+             */
+
+            protected virtual void SetupGeneratePatchId(Mock<TProvider> mock) { }
+
+            protected abstract bool IsPatchIdValid(string patchId);
         }
 
         public class WhenPushingWithBuiltinIdGenerator : WhenPushing<ILiteSyncCloudProvider>
         {
-            
+            protected override bool IsPatchIdValid(string patchId)
+            {
+                return Guid.TryParse(patchId, out Guid _);
+            }
         }
 
         public class WhenPushingWithCustomIdGenerator : WhenPushing<ICombinedProvider>
         {
+            protected override void SetupGeneratePatchId(Mock<ICombinedProvider> mock)
+            {
+                mock.Setup(x => x.GeneratePatchId(It.IsAny<CancellationToken>()))
+                    .ReturnsAsync("CustomId");
+            }
 
+            protected override bool IsPatchIdValid(string patchId)
+            {
+                return patchId == "CustomId";
+            }
         }
 
-        internal Patch CreatePatch(string nextPatchId)
+        internal Patch CreatePatch(string nextPatchId, string entityPropValue = null)
         {
             var id = new EntityId("MyCollection", 123);
-            var change = new EntityChange(id);
+            var entityValues = new Dictionary<string, object>
+            {
+                { EntityPropKey, entityPropValue }
+            };
 
-            var result = new Patch(new []{ change });
+            var change = new EntityChange(id, EntityChangeType.Upsert, entityValues);
+
+            var result = new Patch(new[] { change });
             result.NextPatchId = nextPatchId;
 
             return result;
@@ -215,8 +320,6 @@ namespace LiteDB.Sync.Tests.Core.Internal
             writer.Flush();
             stream.Position = 0;
 
-            Console.WriteLine(JsonConvert.SerializeObject(item));
-
             return stream;
         }
 
@@ -230,7 +333,6 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
         public interface ICombinedProvider : ILiteSyncCloudProvider, ILiteSyncPatchIdGenerator
         {
-            
         }
     }
 }
