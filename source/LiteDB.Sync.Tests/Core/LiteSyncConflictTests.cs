@@ -2,7 +2,7 @@
 using LiteDB.Sync.Internal;
 using NUnit.Framework;
 
-namespace LiteDB.Sync.Tests.Unit
+namespace LiteDB.Sync.Tests.Core
 {
     [TestFixture]
     public class LiteSyncConflictTests
@@ -27,8 +27,8 @@ namespace LiteDB.Sync.Tests.Unit
             [Test]
             public void ShouldSetResolutionWhenKeepingLocal()
             {
-                var local = this.CreateChange(1);
-                var remote = this.CreateChange(2);
+                var local = this.CreateChange();
+                var remote = this.CreateChange();
 
                 var conflict = new LiteSyncConflict(local, remote);
 
@@ -41,8 +41,8 @@ namespace LiteDB.Sync.Tests.Unit
             [Test]
             public void ShouldSetResolutionWhenKeepingRemote()
             {
-                var local = this.CreateChange(1);
-                var remote = this.CreateChange(2);
+                var local = this.CreateChange();
+                var remote = this.CreateChange();
 
                 var conflict = new LiteSyncConflict(local, remote);
 
@@ -55,8 +55,8 @@ namespace LiteDB.Sync.Tests.Unit
             [Test]
             public void ShouldSetResolutionAndMergedEntityWhenKeepingMerged()
             {
-                var local = this.CreateChange(1);
-                var remote = this.CreateChange(2);
+                var local = this.CreateChange();
+                var remote = this.CreateChange();
 
                 var conflict = new LiteSyncConflict(local, remote);
 
@@ -70,7 +70,7 @@ namespace LiteDB.Sync.Tests.Unit
 
         protected EntityChange CreateChange(int id = 1)
         {
-            return new EntityChange(string.Empty, new BsonValue(id), EntityChangeType.Upsert, new BsonDocument());
+            return new EntityChange("MyCollection", new BsonValue(id), EntityChangeType.Upsert, new BsonDocument());
         }
     }
 }

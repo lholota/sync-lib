@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using LiteDB.Sync.Exceptions;
 using LiteDB.Sync.Internal;
 using LiteDB.Sync.Tests.TestUtils;
@@ -8,10 +7,10 @@ using LiteDB.Sync.Tests.Tools.Entities;
 using Moq;
 using NUnit.Framework;
 
-namespace LiteDB.Sync.Tests.Core.LiteSyncDatabaseTests
+namespace LiteDB.Sync.Tests.Core
 {
     [TestFixture]
-    public class UnitTests
+    public class LiteSyncDatabaseTests
     {
         protected MemoryStream DbStream;
         protected LiteSyncDatabase SyncDatabase;
@@ -35,7 +34,7 @@ namespace LiteDB.Sync.Tests.Core.LiteSyncDatabaseTests
             this.DbStream.Dispose();
         }
 
-        public class WhenGettingCollectionByType : UnitTests
+        public class WhenGettingCollectionByType : LiteSyncDatabaseTests
         {
             [Test]
             public void ShouldReturnNativeCollectionIfNotSynced()
@@ -68,7 +67,7 @@ namespace LiteDB.Sync.Tests.Core.LiteSyncDatabaseTests
             }
         }
 
-        public class WhenGettingCollectionByTypeAndName : UnitTests
+        public class WhenGettingCollectionByTypeAndName : LiteSyncDatabaseTests
         {
             private const string CollectionName = "Explicit";
 
@@ -103,7 +102,7 @@ namespace LiteDB.Sync.Tests.Core.LiteSyncDatabaseTests
             }
         }
 
-        public class WhenGettingBsonDocCollection : UnitTests
+        public class WhenGettingBsonDocCollection : LiteSyncDatabaseTests
         {
             private const string CollectionName = "Explicit";
 
@@ -130,7 +129,7 @@ namespace LiteDB.Sync.Tests.Core.LiteSyncDatabaseTests
             }
         }
 
-        public class WhenGettingDeletedEntitiesCollection : UnitTests
+        public class WhenGettingDeletedEntitiesCollection : LiteSyncDatabaseTests
         {
             [Test]
             public void CollectionShouldHaveCorrectName()
@@ -142,7 +141,7 @@ namespace LiteDB.Sync.Tests.Core.LiteSyncDatabaseTests
             }
         }
 
-        public class WhenSynchronizing : UnitTests
+        public class WhenSynchronizing : LiteSyncDatabaseTests
         {
             [Test]
             public void Placeholder()

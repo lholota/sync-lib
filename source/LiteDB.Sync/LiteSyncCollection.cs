@@ -187,8 +187,7 @@ namespace LiteDB.Sync
 
                 result = this.UnderlyingCollection.Insert(document);
 
-                var deletedEntityId = new EntityId(this.Name, result);
-                this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId.ToString());
+                this.RemoveDeletedEntity(result);
 
                 tx.Commit();
             }
@@ -204,8 +203,7 @@ namespace LiteDB.Sync
 
                 this.UnderlyingCollection.Insert(id, document);
 
-                var deletedEntityId = EntityId.GetEntityIdString(this.Name, id);
-                this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
+                this.RemoveDeletedEntity(id);
 
                 tx.Commit();
             }
@@ -238,13 +236,9 @@ namespace LiteDB.Sync
 
             return this.UnderlyingCollection.InsertBulk(docs, batchSize, batch =>
             {
-                var coll = this.database.GetDeletedEntitiesCollection();
+                var entityIds = batch.Select(doc => doc["_id"]);
 
-                foreach (var doc in batch)
-                {
-                    var deletedEntityId = EntityId.GetEntityIdString(this.Name, doc["_id"]);
-                    coll.Delete(deletedEntityId);
-                }
+                this.RemoveDeletedEntities(entityIds);
 
                 batchInsertedAction?.Invoke(batch);
             });
@@ -329,9 +323,7 @@ namespace LiteDB.Sync
                 if (result)
                 {
                     var id = this.database.Mapper.GetEntityId(entity);
-                    var deletedEntityId = EntityId.GetEntityIdString(this.Name, id);
-
-                    this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
+                    this.RemoveDeletedEntity(id);
                 }
 
                 tx.Commit();
@@ -352,9 +344,7 @@ namespace LiteDB.Sync
 
                 if (result)
                 {
-                    var deletedEntityId = EntityId.GetEntityIdString(this.Name, id);
-
-                    this.database.GetDeletedEntitiesCollection().Delete(deletedEntityId);
+                    this.RemoveDeletedEntity(id);
                 }
 
                 tx.Commit();
@@ -379,10 +369,11 @@ namespace LiteDB.Sync
 
                     foreach (var entity in entities)
                     {
-                        var id = this.database.Mapper.GetEntityId(entity);
-                        var deletedEntityId = EntityId.GetEntityIdString(this.Name, id);
+                        var docId = this.database.Mapper.GetEntityId(entity);
+                        var deletedEntityId = new EntityId(this.Name, docId);
+                        var deletedEntityIdBson = this.database.Mapper.ToDocument(deletedEntityId);
 
-                        deletedEntCollection.Delete(deletedEntityId);
+                        deletedEntCollection.Delete(deletedEntityIdBson);
                     }
                 }
 
@@ -394,15 +385,27 @@ namespace LiteDB.Sync
 
         private void RemoveDeletedEntities(IEnumerable<T> docs)
         {
+            var docIds = docs.Select(doc => this.database.Mapper.GetEntityId(doc));
+
+            this.RemoveDeletedEntities(docIds);
+        }
+
+        private void RemoveDeletedEntities(IEnumerable<BsonValue> ids)
+        {
+            foreach (var id in ids)
+            {
+                this.RemoveDeletedEntity(id);
+            }
+        }
+
+        private void RemoveDeletedEntity(BsonValue id)
+        {
             var deletedEntCollection = this.database.GetDeletedEntitiesCollection();
 
-            foreach (var doc in docs)
-            {
-                var docId = this.database.Mapper.GetEntityId(doc);
-                var deletedEntityId = EntityId.GetEntityIdString(this.Name, docId);
+            var deletedEntityId = new EntityId(this.Name, id);
+            var deletedEntityIdBson = this.database.Mapper.ToDocument(deletedEntityId);
 
-                deletedEntCollection.Delete(deletedEntityId);
-            }
+            deletedEntCollection.Delete(deletedEntityIdBson);
         }
 
         private void MarkDirty(IEnumerable<T> entities)
