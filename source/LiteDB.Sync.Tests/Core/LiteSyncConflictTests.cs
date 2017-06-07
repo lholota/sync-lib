@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using LiteDB.Sync.Internal;
 using NUnit.Framework;
 
@@ -68,9 +69,90 @@ namespace LiteDB.Sync.Tests.Core
             }
         }
 
-        protected EntityChange CreateChange(int id = 1)
+        public class WhenCheckingHasDifferences : LiteSyncConflictTests
         {
-            return new EntityChange("MyCollection", new BsonValue(id), EntityChangeType.Upsert, new BsonDocument());
+            [Test]
+            public void ShouldReturnFalseIfBothChangesAreEqual()
+            {
+                var values = new Dictionary<string, BsonValue>();
+                values["Key"] = "Value";
+
+                var localDoc = new BsonDocument(values);
+                var remoteDoc = new BsonDocument(values);
+
+                var localChange = this.CreateChange(doc: localDoc);
+                var remoteChange = this.CreateChange(doc: remoteDoc);
+
+                var conflict = new LiteSyncConflict(localChange, remoteChange);
+
+                Assert.IsFalse(conflict.HasDifferences());
+            }
+
+            [Test]
+            public void ShouldReturnFalseIfBothAreDeletes()
+            {
+                var localChange = new EntityChange(new EntityId("MyColl", 1));
+                var remoteChange = new EntityChange(new EntityId("MyColl", 1));
+
+                var conflict = new LiteSyncConflict(localChange, remoteChange);
+
+                Assert.IsFalse(conflict.HasDifferences());
+            }
+
+            [Test]
+            public void ShouldReturnTrueIfChangeTypesDiffer()
+            {
+                var localChange = new EntityChange(new EntityId("MyCollection", 1));
+                var remoteChange = new EntityChange(new EntityId("MyCollection", 1), EntityChangeType.Upsert, new BsonDocument());
+
+                var conflict = new LiteSyncConflict(localChange, remoteChange);
+
+                Assert.IsTrue(conflict.HasDifferences());
+            }
+
+            [Test]
+            public void ShouldReturnTrueIfRemoteContainsNewProperty()
+            {
+                var localValues = new Dictionary<string, BsonValue>();
+                var remoteValues = new Dictionary<string, BsonValue>();
+
+                remoteValues["Key"] = "Value";
+
+                var localDoc = new BsonDocument(localValues);
+                var remoteDoc = new BsonDocument(remoteValues);
+
+                var localChange = this.CreateChange(doc: localDoc);
+                var remoteChange = this.CreateChange(doc: remoteDoc);
+
+                var conflict = new LiteSyncConflict(localChange, remoteChange);
+
+                Assert.IsTrue(conflict.HasDifferences());
+            }
+
+            [Test]
+            public void ShouldReturnTrueIfRemoteContainsDifferentValue()
+            {
+                var localValues = new Dictionary<string, BsonValue>();
+                var remoteValues = new Dictionary<string, BsonValue>();
+
+                localValues["Key"] = "Local";
+                remoteValues["Key"] = "Remote";
+
+                var localDoc = new BsonDocument(localValues);
+                var remoteDoc = new BsonDocument(remoteValues);
+
+                var localChange = this.CreateChange(doc: localDoc);
+                var remoteChange = this.CreateChange(doc: remoteDoc);
+
+                var conflict = new LiteSyncConflict(localChange, remoteChange);
+
+                Assert.IsTrue(conflict.HasDifferences());
+            }
+        }
+
+        protected EntityChange CreateChange(int id = 1, BsonDocument doc = null)
+        {
+            return new EntityChange("MyCollection", new BsonValue(id), EntityChangeType.Upsert, doc ?? new BsonDocument());
         }
     }
 }

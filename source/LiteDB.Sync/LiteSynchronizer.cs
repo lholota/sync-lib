@@ -105,6 +105,13 @@ namespace LiteDB.Sync
             {
                 ct.ThrowIfCancellationRequested();
 
+                if (!conflict.HasDifferences())
+                {
+                    remoteChanges.RemoveChange(conflict.EntityId);
+                    localChanges.RemoveChange(conflict.EntityId);
+                    continue;
+                }
+
                 this.config.ConflictResolver.Resolve(conflict);
 
 

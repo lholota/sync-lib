@@ -43,6 +43,21 @@ namespace LiteDB.Sync
             this.MergedEntity = mergedEntity;
         }
 
+        internal bool HasDifferences()
+        {
+            if (this.LocalChange.ChangeType != this.RemoteChange.ChangeType)
+            {
+                return true;
+            }
+
+            if (this.LocalChange.ChangeType == EntityChangeType.Delete)
+            {
+                return false;
+            }
+
+            return this.LocalChange.Entity.CompareTo(this.RemoteChange.Entity) != 0;
+        }
+
         internal enum ConflictResolution
         {
             None,
