@@ -105,15 +105,9 @@ namespace LiteDB.Sync
             {
                 ct.ThrowIfCancellationRequested();
 
-                if (!conflict.HasDifferences())
-                {
-                    remoteChanges.RemoveChange(conflict.EntityId);
-                    localChanges.RemoveChange(conflict.EntityId);
-                    continue;
-                }
-
                 this.config.ConflictResolver.Resolve(conflict);
 
+                // This should move to the Conflict logic...
 
                 switch (conflict.Resolution)
                 {
@@ -129,8 +123,8 @@ namespace LiteDB.Sync
                         break;
 
                     case LiteSyncConflict.ConflictResolution.Merge:
-                        localChanges.ReplaceEntity(conflict.EntityId, conflict.MergedEntity);
-                        localChanges.ReplaceEntity(conflict.EntityId, conflict.MergedEntity);
+                        localChanges.ReplaceChange(conflict.EntityId, conflict.MergedEntity);
+                        localChanges.ReplaceChange(conflict.EntityId, conflict.MergedEntity);
                         break;
                 }
             }
@@ -145,12 +139,12 @@ namespace LiteDB.Sync
                 var collection = this.db.GetCollection(collectionName);
                 var dirtyEntities = collection.FindDirtyEntities();
 
-                patch.AddChanges(collectionName, dirtyEntities);
+                patch.AddUpsertChanges(collectionName, dirtyEntities);
 
                 var delCollection = this.db.GetCollection<DeletedEntity>(LiteSyncDatabase.DeletedEntitiesCollectionName);
                 var deletedEntities = delCollection.FindAll();
 
-                patch.AddDeletes(deletedEntities);
+                patch.AddDeleteChanges(deletedEntities);
 
                 ct.ThrowIfCancellationRequested();
             }

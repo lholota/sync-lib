@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -164,7 +163,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 Assert.AreEqual("Patch3", pullResult.CloudState.NextPatchId);
 
                 Assert.IsTrue(pullResult.HasChanges);
-                Assert.AreEqual("Value3", pullResult.RemotePatch.Changes.Single().RawValues[EntityPropKey]);
+                Assert.AreEqual("Value3", pullResult.RemotePatch.Changes.OfType<UpsertEntityChange>().Single().Entity[EntityPropKey].RawValue);
 
                 this.providerMock.VerifyAll();
             }
@@ -284,12 +283,10 @@ namespace LiteDB.Sync.Tests.Core.Internal
         internal Patch CreatePatch(string nextPatchId, string entityPropValue = null)
         {
             var id = new EntityId("MyCollection", 123);
-            var entityValues = new Dictionary<string, object>
-            {
-                { EntityPropKey, entityPropValue }
-            };
+            var doc = new BsonDocument();
+            doc[EntityPropKey] = entityPropValue;
 
-            var change = new EntityChange(id, EntityChangeType.Upsert, entityValues);
+            var change = new UpsertEntityChange(id, doc);
 
             var result = new Patch(new[] { change });
             result.NextPatchId = nextPatchId;
@@ -299,7 +296,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
         protected T DeserializeFromStream<T>(Stream stream)
         {
-            var serializer = new Newtonsoft.Json.JsonSerializer();
+            var serializer = JsonSerialization.CreateSerializer();
 
             // Do not dispose the reader, this would dispose the stream 
             // which is a responsibility of the CloudClient
@@ -311,7 +308,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
         protected Stream CreateJsonStream<T>(T item)
         {
-            var serializer = new Newtonsoft.Json.JsonSerializer();
+            var serializer = JsonSerialization.CreateSerializer();
             var stream = new MemoryStream();
 
             var writer = new StreamWriter(stream);

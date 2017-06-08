@@ -5,7 +5,7 @@ namespace LiteDB.Sync
 {
     public class LiteSyncConflict
     {
-        public LiteSyncConflict(EntityChange localChange, EntityChange remoteChange)
+        public LiteSyncConflict(EntityChangeBase localChange, EntityChangeBase remoteChange)
         {
             if (localChange?.EntityId != remoteChange?.EntityId)
             {
@@ -19,9 +19,9 @@ namespace LiteDB.Sync
 
         public EntityId EntityId => this.LocalChange.EntityId;
 
-        public EntityChange LocalChange { get; }
+        public EntityChangeBase LocalChange { get; }
 
-        public EntityChange RemoteChange { get; }
+        public EntityChangeBase RemoteChange { get; }
 
         internal ConflictResolution Resolution { get; private set; }
 
@@ -45,17 +45,20 @@ namespace LiteDB.Sync
 
         internal bool HasDifferences()
         {
-            if (this.LocalChange.ChangeType != this.RemoteChange.ChangeType)
+            if (this.LocalChange.GetType() != this.RemoteChange.GetType())
             {
                 return true;
             }
 
-            if (this.LocalChange.ChangeType == EntityChangeType.Delete)
+            if (this.LocalChange is DeleteEntityChange)
             {
                 return false;
             }
 
-            return this.LocalChange.Entity.CompareTo(this.RemoteChange.Entity) != 0;
+            var localUpsert = (UpsertEntityChange) this.LocalChange;
+            var remoteUpsert = (UpsertEntityChange) this.RemoteChange;
+
+            return localUpsert.Entity.CompareTo(remoteUpsert.Entity) != 0;
         }
 
         internal enum ConflictResolution

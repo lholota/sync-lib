@@ -7,12 +7,12 @@ namespace LiteDB.Sync.Internal
     { 
         internal static EntityId FromString(string str)
         {
-            return JsonConvert.DeserializeObject<EntityId>(str, JsonSerialization.Settings);
+            return JsonSerialization.DeserializeFromString<EntityId>(str);
         }
 
         internal static string GetEntityIdString(string collectionName, BsonValue id)
         {
-            return JsonConvert.SerializeObject(new EntityId(collectionName, id), JsonSerialization.Settings);
+            return JsonSerialization.SerializeToString(new EntityId(collectionName, id));
         }
 
         public EntityId(string collectionName, BsonValue id)
@@ -73,7 +73,7 @@ namespace LiteDB.Sync.Internal
 
         public override string ToString()
         {
-            return JsonConvert.SerializeObject(this, JsonSerialization.Settings);
+            return JsonSerialization.SerializeToString(this);
         }
 
         private void Validate(string collectionName, BsonValue id)

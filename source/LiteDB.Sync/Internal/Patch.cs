@@ -11,7 +11,7 @@ namespace LiteDB.Sync.Internal
 
         public static Patch Combine(IList<Patch> patches)
         {
-            var resultChanges = new Dictionary<EntityId, EntityChange>();
+            var resultChanges = new Dictionary<EntityId, EntityChangeBase>();
 
             foreach (var patch in patches)
             {
@@ -32,27 +32,28 @@ namespace LiteDB.Sync.Internal
 
             return conflictingIds
                 .Select(x => new LiteSyncConflict(localChanges.changes[x], remoteChanges.changes[x]))
+                .Where(x => x.HasDifferences())
                 .ToArray();
         }
 
         #endregion
 
-        private readonly Dictionary<EntityId, EntityChange> changes;
+        private readonly Dictionary<EntityId, EntityChangeBase> changes;
 
         internal Patch()
         {
-            this.changes = new Dictionary<EntityId, EntityChange>();
+            this.changes = new Dictionary<EntityId, EntityChangeBase>();
         }
 
         [JsonConstructor]
-        internal Patch([JsonProperty(nameof(Changes))] IEnumerable<EntityChange> initialChanges)
+        internal Patch([JsonProperty(nameof(Changes))] IEnumerable<EntityChangeBase> initialChanges)
         {
             this.changes = initialChanges.ToDictionary(
                 x => x.EntityId,
                 x => x);
         }
 
-        private Patch(Dictionary<EntityId, EntityChange> initialChanges)
+        private Patch(Dictionary<EntityId, EntityChangeBase> initialChanges)
         {
             this.changes = initialChanges;
         }
@@ -60,22 +61,32 @@ namespace LiteDB.Sync.Internal
         [JsonIgnore]
         public bool HasChanges => this.changes.Count > 0;
 
-        [JsonProperty]
-        public IEnumerable<EntityChange> Changes => this.changes.Select(x => x.Value);
+        [JsonProperty(ItemTypeNameHandling = TypeNameHandling.All)]
+        public IEnumerable<EntityChangeBase> Changes => this.changes.Select(x => x.Value).ToList();
 
         public string NextPatchId { get; set; }
 
         internal void RemoveChange(EntityId id)
         {
-            this.changes.Remove(id);
+            if (!this.changes.Remove(id))
+            {
+                throw new KeyNotFoundException($"No change with EntityId {id} could be found.");
+            }
         }
 
-        internal void ReplaceEntity(EntityId id, BsonDocument doc)
+        internal void ReplaceChange(EntityId id, BsonDocument doc)
         {
-            this.changes[id].Entity = doc;
+            var change = new UpsertEntityChange(id, doc);
+
+            if (!this.changes.ContainsKey(id))
+            {
+                throw new KeyNotFoundException($"No change with EntityId {id} could be found.");
+            }
+
+            this.changes[id] = change;
         }
 
-        internal void AddChanges(string collectionName, IEnumerable<BsonDocument> dirtyEntities)
+        internal void AddUpsertChanges(string collectionName, IEnumerable<BsonDocument> dirtyEntities)
         {
             if (dirtyEntities == null)
             {
@@ -85,12 +96,13 @@ namespace LiteDB.Sync.Internal
             foreach (var bsonDoc in dirtyEntities)
             {
                 var entityId = new EntityId(collectionName, bsonDoc["_id"]);
-                var change = new EntityChange(entityId, EntityChangeType.Upsert, bsonDoc);
+                var change = new UpsertEntityChange(entityId, bsonDoc);
+
                 this.changes.Add(change.EntityId, change);
             }
         }
 
-        internal void AddDeletes(IEnumerable<DeletedEntity> deletedEntities)
+        internal void AddDeleteChanges(IEnumerable<DeletedEntity> deletedEntities)
         {
             if (deletedEntities == null)
             {
@@ -99,7 +111,7 @@ namespace LiteDB.Sync.Internal
 
             foreach (var deleted in deletedEntities)
             {
-                var change = new EntityChange(deleted.EntityId);
+                var change = new DeleteEntityChange(deleted.EntityId);
                 this.changes.Add(change.EntityId, change);
             }
         }

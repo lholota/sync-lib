@@ -13,8 +13,8 @@ namespace LiteDB.Sync.Tests.Core
             [Test]
             public void ShouldFailIfChangesHaveDifferentEntityId()
             {
-                var local = this.CreateChange(1);
-                var remote = this.CreateChange(2);
+                var local = this.CreateChange(2);
+                var remote = this.CreateChange(3);
 
                 // ReSharper disable once ObjectCreationAsStatement
                 var ex = Assert.Throws<ArgumentException>(() => new LiteSyncConflict(local, remote));
@@ -91,8 +91,8 @@ namespace LiteDB.Sync.Tests.Core
             [Test]
             public void ShouldReturnFalseIfBothAreDeletes()
             {
-                var localChange = new EntityChange(new EntityId("MyColl", 1));
-                var remoteChange = new EntityChange(new EntityId("MyColl", 1));
+                var localChange = new DeleteEntityChange(new EntityId("MyColl", 1));
+                var remoteChange = new DeleteEntityChange(new EntityId("MyColl", 1));
 
                 var conflict = new LiteSyncConflict(localChange, remoteChange);
 
@@ -102,8 +102,8 @@ namespace LiteDB.Sync.Tests.Core
             [Test]
             public void ShouldReturnTrueIfChangeTypesDiffer()
             {
-                var localChange = new EntityChange(new EntityId("MyCollection", 1));
-                var remoteChange = new EntityChange(new EntityId("MyCollection", 1), EntityChangeType.Upsert, new BsonDocument());
+                var localChange = new DeleteEntityChange(new EntityId("MyCollection", 1));
+                var remoteChange = new UpsertEntityChange(new EntityId("MyCollection", 1), new BsonDocument());
 
                 var conflict = new LiteSyncConflict(localChange, remoteChange);
 
@@ -150,9 +150,10 @@ namespace LiteDB.Sync.Tests.Core
             }
         }
 
-        protected EntityChange CreateChange(int id = 1, BsonDocument doc = null)
+        protected EntityChangeBase CreateChange(int id = 1, BsonDocument doc = null)
         {
-            return new EntityChange("MyCollection", new BsonValue(id), EntityChangeType.Upsert, doc ?? new BsonDocument());
+            var entityId = new EntityId("MyCollection", new BsonValue(id));
+            return new UpsertEntityChange(entityId, doc ?? new BsonDocument());
         }
     }
 }

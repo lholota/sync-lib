@@ -6,35 +6,26 @@ using NUnit.Framework;
 namespace LiteDB.Sync.Tests.Core.Internal
 {
     [TestFixture]
-    public class EntityChangeTests
+    public class UpsertEntityChangeTests
     {
-        public class WhenCreating : EntityChangeTests
+        public class WhenCreating : UpsertEntityChangeTests
         {
             [Test]
-            public void ShouldThrowOnUpsertWithNoEntity()
+            public void ShouldThrowWithNoEntity()
             {
                 var entityId = new EntityId("Dummy", 1);
-                Assert.Throws<ArgumentNullException>(() => new EntityChange(entityId, EntityChangeType.Upsert, (BsonDocument)null));
+                Assert.Throws<ArgumentNullException>(() => new UpsertEntityChange(entityId, (BsonDocument)null));
+            }
+
+            [Test]
+            public void ShouldThrowWithNoEntityId()
+            {
+                Assert.Throws<ArgumentNullException>(() => new UpsertEntityChange(null, new BsonDocument()));
             }
         }
 
-        public class WhenApplying : EntityChangeTests
+        public class WhenApplying : UpsertEntityChangeTests
         {
-            [Test]
-            public void DeleteChangeShouldDeleteEntity()
-            {
-                var id = new BsonValue(123);
-
-                var collectionMock = new Mock<ILiteCollection<BsonDocument>>();
-                collectionMock.Setup(x => x.Delete(id));
-
-                var entityId = new EntityId("Dummy", id);
-                var change = new EntityChange(entityId);
-                change.Apply(collectionMock.Object);
-
-                collectionMock.VerifyAll();
-            }
-
             [Test]
             public void UpsertChangeShouldUpsertEntity()
             {
@@ -45,7 +36,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 collectionMock.Setup(x => x.Upsert(id, doc));
 
                 var entityId = new EntityId("Dummy", id);
-                var change = new EntityChange(entityId, EntityChangeType.Upsert, doc);
+                var change = new UpsertEntityChange(entityId, doc);
                 change.Apply(collectionMock.Object);
 
                 collectionMock.VerifyAll();

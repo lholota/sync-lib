@@ -16,7 +16,7 @@ namespace LiteDB.Sync.Internal
         public CloudClient(ILiteSyncCloudProvider provider)
         {
             this.provider = provider;
-            this.serializer = new Newtonsoft.Json.JsonSerializer();
+            this.serializer = JsonSerialization.CreateSerializer();
         }
 
         public async Task<PullResult> Pull(CloudState originalState, CancellationToken ct)

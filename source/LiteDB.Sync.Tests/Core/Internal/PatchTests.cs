@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using LiteDB.Sync.Internal;
 using LiteDB.Sync.Tests.TestUtils;
@@ -18,14 +20,22 @@ namespace LiteDB.Sync.Tests.Core.Internal
             public void ShouldSerializeAndDeserialize()
             {
                 var expected = CreateSamplePatch();
+                var serializer = JsonSerialization.CreateSerializer();
 
-                var settings = new JsonSerializerSettings();
-                settings.Formatting = Formatting.Indented;
+                Patch actual;
 
-                var serialized = JsonConvert.SerializeObject(expected, settings);
-                Console.WriteLine(serialized);
+                using (var ms = new MemoryStream())
+                using (var writer = new StreamWriter(ms))
+                using (var reader = new StreamReader(ms))
+                using (var jsonReader = new JsonTextReader(reader))
+                {
+                    serializer.Serialize(writer, expected);
 
-                var actual = JsonConvert.DeserializeObject<Patch>(serialized, JsonSerialization.Settings);
+                    writer.Flush();
+                    ms.Position = 0;
+
+                    actual = serializer.Deserialize<Patch>(jsonReader);
+                }
 
                 Assert.IsNotNull(actual);
                 Assert.AreEqual(expected.NextPatchId, actual.NextPatchId);
@@ -35,18 +45,23 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
                 Assert.AreEqual(expectedChanges.Length, actualChanges.Length);
 
-                var firstExpected = expectedChanges.First();
-                var firstActual = actualChanges.First();
+                var firstExpected = (UpsertEntityChange)expectedChanges.First();
+                var firstActual = (UpsertEntityChange)actualChanges.First();
 
                 Assert.AreEqual(firstExpected.EntityId, firstActual.EntityId);
                 Assert.AreEqual(firstExpected.Entity["Text"], firstActual.Entity["Text"]);
-                Assert.AreEqual(firstExpected.ChangeType, firstActual.ChangeType);
 
-                var secondExpected = expectedChanges.Skip(1).First();
-                var secondActual = actualChanges.Skip(1).First();
+                var secondExpected = (UpsertEntityChange)expectedChanges.Skip(1).First();
+                var secondActual = (UpsertEntityChange)actualChanges.Skip(1).First();
 
                 Assert.AreEqual(secondExpected.EntityId, secondActual.EntityId);
-                Assert.AreEqual(secondExpected.ChangeType, secondActual.ChangeType);
+                Assert.AreEqual(secondExpected.Entity["Text"], secondActual.Entity["Text"]);
+
+                var thirdExpected = expectedChanges.Skip(2).First();
+                var thirdActual = actualChanges.Skip(2).First();
+
+                Assert.IsInstanceOf<DeleteEntityChange>(thirdActual);
+                Assert.AreEqual(thirdExpected.EntityId, thirdActual.EntityId);
             }
 
             private static Patch CreateSamplePatch()
@@ -56,18 +71,19 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
                 var docs = new[]
                 {
-                    GetDocument(123, "AAA")
+                    GetDocument(1, "AAA"),
+                    GetDocument(2, null)
                     // TBA: Document with complex unknown id type
                 };
 
-                patch.AddChanges(CollectionName, docs);
+                patch.AddUpsertChanges(CollectionName, docs);
 
                 var deleted = new[]
                 {
-                    new DeletedEntity(CollectionName, 456)
+                    new DeletedEntity(CollectionName, 3)
                 };
 
-                patch.AddDeletes(deleted);
+                patch.AddDeleteChanges(deleted);
 
                 return patch;
             }
@@ -81,15 +97,15 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 var document = GetDocument(123);
 
                 var patch = new Patch();
-                patch.AddChanges(CollectionName, new[] { document });
+                patch.AddUpsertChanges(CollectionName, new[] { document });
 
                 var change = patch.Changes.Single();
 
                 Assert.AreEqual(123, change.EntityId.Id);
                 Assert.AreEqual(CollectionName, change.EntityId.CollectionName);
 
-                Assert.AreEqual(EntityChangeType.Upsert, change.ChangeType);
-                Assert.AreEqual(document, change.Entity);
+                var upsertEntityChange = (UpsertEntityChange)change;
+                Assert.AreEqual(document, upsertEntityChange.Entity);
             }
 
             [Test]
@@ -98,15 +114,14 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 var deletedEntity = new DeletedEntity(CollectionName, 123);
 
                 var patch = new Patch();
-                patch.AddDeletes(new[] { deletedEntity });
+                patch.AddDeleteChanges(new[] { deletedEntity });
 
                 var change = patch.Changes.Single();
 
                 Assert.AreEqual(123, change.EntityId.Id);
                 Assert.AreEqual(CollectionName, change.EntityId.CollectionName);
 
-                Assert.AreEqual(EntityChangeType.Delete, change.ChangeType);
-                Assert.IsNull(change.Entity);
+                Assert.IsInstanceOf<DeleteEntityChange>(change);
             }
         }
 
@@ -117,8 +132,8 @@ namespace LiteDB.Sync.Tests.Core.Internal
             {
                 var patches = new[]
                 {
-                    this.CreatePatch(EntityChangeType.Upsert, "Value1"),
-                    this.CreatePatch(EntityChangeType.Upsert, "Value2")
+                    this.CreatePatchWithUpsert("Value1"),
+                    this.CreatePatchWithUpsert("Value2")
                 };
 
                 var combined = Patch.Combine(patches);
@@ -127,11 +142,13 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
                 var change = combined.Changes.Single();
 
-                Assert.AreEqual(EntityChangeType.Upsert, change.ChangeType);
+                Assert.IsInstanceOf<UpsertEntityChange>(change);
                 Assert.AreEqual(123, change.EntityId.Id);
 
                 BsonValue actualStringPropValue;
-                change.Entity.TryGetValue(nameof(TestEntity.Text), out actualStringPropValue);
+                var upsertChange = (UpsertEntityChange)change;
+
+                upsertChange.Entity.TryGetValue(nameof(TestEntity.Text), out actualStringPropValue);
 
                 Assert.IsNotNull(actualStringPropValue);
                 Assert.AreEqual("Value2", actualStringPropValue.ToString());
@@ -142,8 +159,8 @@ namespace LiteDB.Sync.Tests.Core.Internal
             {
                 var patches = new[]
                 {
-                    this.CreatePatch(EntityChangeType.Upsert),
-                    this.CreatePatch(EntityChangeType.Delete)
+                    this.CreatePatchWithUpsert(),
+                    this.CreatePatchWithDelete()
                 };
 
                 var combined = Patch.Combine(patches);
@@ -152,7 +169,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
                 var change = combined.Changes.Single();
 
-                Assert.AreEqual(EntityChangeType.Delete, change.ChangeType);
+                Assert.IsInstanceOf<DeleteEntityChange>(change);
                 Assert.AreEqual(123, change.EntityId.Id);
             }
 
@@ -161,8 +178,8 @@ namespace LiteDB.Sync.Tests.Core.Internal
             {
                 var patches = new[]
                 {
-                    this.CreatePatch(EntityChangeType.Delete),
-                    this.CreatePatch(EntityChangeType.Upsert)
+                    this.CreatePatchWithDelete(),
+                    this.CreatePatchWithUpsert()
                 };
 
                 var combined = Patch.Combine(patches);
@@ -171,7 +188,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
                 var change = combined.Changes.Single();
 
-                Assert.AreEqual(EntityChangeType.Upsert, change.ChangeType);
+                Assert.IsInstanceOf<UpsertEntityChange>(change);
                 Assert.AreEqual(123, change.EntityId.Id);
             }
 
@@ -180,8 +197,8 @@ namespace LiteDB.Sync.Tests.Core.Internal
             {
                 var patches = new[]
                 {
-                    this.CreatePatch(EntityChangeType.Upsert, collectionName:CollectionName),
-                    this.CreatePatch(EntityChangeType.Upsert, collectionName:CollectionName + "Another")
+                    this.CreatePatchWithUpsert(collectionName:CollectionName),
+                    this.CreatePatchWithUpsert(collectionName:CollectionName + "Another")
                 };
 
                 var combined = Patch.Combine(patches);
@@ -189,31 +206,223 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 Assert.AreEqual(2, combined.Changes.Count());
             }
 
-            private Patch CreatePatch(EntityChangeType opType, string stringPropValue = null, string collectionName = null)
+            private Patch CreatePatchWithUpsert(string stringPropValue = null, string collectionName = null)
             {
                 var result = new Patch();
 
-                if (opType == EntityChangeType.Upsert)
+                var entity = new TestEntity(123)
                 {
-                    var entity = new TestEntity(123)
-                    {
-                        Text = stringPropValue
-                    };
+                    Text = stringPropValue
+                };
 
-                    var bsonDoc = BsonMapper.Global.ToDocument(entity);
+                var bsonDoc = BsonMapper.Global.ToDocument(entity);
 
-                    result.AddChanges(collectionName ?? CollectionName, new[] { bsonDoc });
-                }
-                else
-                {
-                    var deletedEntity = new DeletedEntity(collectionName ?? CollectionName, 123);
+                result.AddUpsertChanges(collectionName ?? CollectionName, new[] { bsonDoc });
 
-                    result.AddDeletes(new[] { deletedEntity });
-                }
+                return result;
+            }
+
+            private Patch CreatePatchWithDelete(string collectionName = null)
+            {
+                var result = new Patch();
+                var deletedEntity = new DeletedEntity(collectionName ?? CollectionName, 123);
+
+                result.AddDeleteChanges(new[] { deletedEntity });
 
                 return result;
             }
         }
+
+        public class WhenGettingHasChanges : PatchTests
+        {
+            [Test]
+            public void ShouldReturnFalseIfHasZeroChanges()
+            {
+                var patch = new Patch();
+
+                Assert.IsFalse(patch.HasChanges);
+            }
+
+            [Test]
+            public void ShouldReturnTrueIfHasChanges()
+            {
+                var patch = new Patch();
+                var doc = new BsonDocument();
+                doc["_id"] = new BsonValue(1);
+
+                patch.AddUpsertChanges("MyColl", new[] { doc });
+
+                Assert.IsTrue(patch.HasChanges);
+            }
+        }
+
+        public class WhenGettingConflicts : PatchTests
+        {
+            [Test]
+            public void ShouldNotReturnConflictWithDeletesOnBothSides()
+            {
+                var localChange = new DeleteEntityChange(new EntityId("MyColl", 1));
+                var remoteChange = new DeleteEntityChange(new EntityId("MyColl", 1));
+
+                var localPatch = new Patch(new[] { localChange });
+                var remotePatch = new Patch(new[] { remoteChange });
+
+                var conflicts = Patch.GetConflicts(localPatch, remotePatch);
+
+                Assert.AreEqual(0, conflicts.Count);
+            }
+
+            [Test]
+            public void ShouldNotReturnConflictWithSameUpsertOnBothSides()
+            {
+                var localDoc = new BsonDocument();
+                var remoteDoc = new BsonDocument();
+
+                localDoc["key"] = "value";
+                remoteDoc["key"] = "value";
+
+                var localChange = new UpsertEntityChange(new EntityId("MyColl", 1), localDoc);
+                var remoteChange = new UpsertEntityChange(new EntityId("MyColl", 1), remoteDoc);
+
+                var localPatch = new Patch(new[] { localChange });
+                var remotePatch = new Patch(new[] { remoteChange });
+
+                var conflicts = Patch.GetConflicts(localPatch, remotePatch);
+
+                Assert.AreEqual(0, conflicts.Count);
+            }
+
+            [Test]
+            public void ShouldReturnConflictWithDifferentChangeTypes()
+            {
+                var localDoc = new BsonDocument();
+
+                localDoc["key"] = "value";
+
+                var localChange = new UpsertEntityChange(new EntityId("MyColl", 1), localDoc);
+                var remoteChange = new DeleteEntityChange(new EntityId("MyColl", 1));
+
+                var localPatch = new Patch(new[] { localChange });
+                var remotePatch = new Patch(new[] { remoteChange });
+
+                var conflicts = Patch.GetConflicts(localPatch, remotePatch);
+
+                Assert.AreEqual(1, conflicts.Count);
+                Assert.AreEqual(localChange, conflicts[0].LocalChange);
+                Assert.AreEqual(remoteChange, conflicts[0].RemoteChange);
+            }
+
+            [Test]
+            public void ShouldReturnConflictWithDifferentValues()
+            {
+                var localDoc = new BsonDocument();
+                var remoteDoc = new BsonDocument();
+
+                localDoc["key"] = "value";
+                remoteDoc["key"] = "different";
+
+                var localChange = new UpsertEntityChange(new EntityId("MyColl", 1), localDoc);
+                var remoteChange = new UpsertEntityChange(new EntityId("MyColl", 1), remoteDoc);
+
+                var localPatch = new Patch(new[] { localChange });
+                var remotePatch = new Patch(new[] { remoteChange });
+
+                var conflicts = Patch.GetConflicts(localPatch, remotePatch);
+
+                Assert.AreEqual(1, conflicts.Count);
+                Assert.AreEqual(localChange, conflicts[0].LocalChange);
+                Assert.AreEqual(remoteChange, conflicts[0].RemoteChange);
+            }
+
+            [Test]
+            public void ShouldNotReturnConflictWhenDifferentEntitiesChanged()
+            {
+                var localDoc = new BsonDocument();
+                var remoteDoc = new BsonDocument();
+
+                localDoc["key"] = "value";
+                remoteDoc["key"] = "different";
+
+                var localChange = new UpsertEntityChange(new EntityId("MyColl", 1), localDoc);
+                var remoteChange = new UpsertEntityChange(new EntityId("MyColl", 55), remoteDoc);
+
+                var localPatch = new Patch(new[] { localChange });
+                var remotePatch = new Patch(new[] { remoteChange });
+
+                var conflicts = Patch.GetConflicts(localPatch, remotePatch);
+
+                Assert.AreEqual(0, conflicts.Count);
+            }
+        }
+
+        public class WhenRemovingChange : PatchTests
+        {
+            [Test]
+            public void ShouldRemoveTheChangeByEntityId()
+            {
+                var changes = new[]
+                {
+                    new DeleteEntityChange(new EntityId("Collection", 1)),
+                };
+
+                var patch = new Patch(changes);
+
+                patch.RemoveChange(new EntityId("Collection", 1));
+
+                Assert.IsFalse(patch.Changes.Any());
+            }
+
+            [Test]
+            public void ShouldThrowIfEntityIdIsNotFound()
+            {
+                var patch = new Patch();
+
+                Assert.Throws<KeyNotFoundException>(() => patch.RemoveChange(new EntityId("Collection", 1)));
+            }
+        }
+
+        public class WhenReplacingEntity : PatchTests
+        {
+            [Test]
+            public void ShouldReplaceChangeById()
+            {
+                var originalDoc = new BsonDocument();
+                var replacingDoc = new BsonDocument();
+
+                originalDoc["key"] = "original";
+                replacingDoc["key"] = "different";
+
+                var id = new EntityId(CollectionName, 1);
+
+                var changes = new[]
+                {
+                    new UpsertEntityChange(id, originalDoc)
+                };
+
+                var patch = new Patch(changes);
+
+                patch.ReplaceChange(id, replacingDoc);
+
+                var replacingChange = patch.Changes
+                    .OfType<UpsertEntityChange>()
+                    .Single(x => x.EntityId == id);
+
+                Assert.AreEqual(replacingDoc, replacingChange.Entity);
+            }
+
+            [Test]
+            public void ShouldThrowIfEntityIdIsNotFound()
+            {
+                var patch = new Patch();
+
+                Assert.Throws<KeyNotFoundException>(() =>
+                {
+                    patch.ReplaceChange(new EntityId("Collection", 1), new BsonDocument());
+                });
+            }
+        }
+
+        // TBA: ReplaceEntity
 
         protected static BsonDocument GetDocument(int id, string stringPropValue = null, bool requiresSync = true)
         {

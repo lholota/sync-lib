@@ -13,8 +13,8 @@ namespace LiteDB.Sync.Tests.Core.Internal
             [Test]
             public void ShouldCombinePatches()
             {
-                var first = new Patch(new[] { new EntityChange("MyColl", "ID", EntityChangeType.Upsert, new BsonDocument()) });
-                var second = new Patch(new[] { new EntityChange("MyColl", "ID", EntityChangeType.Upsert, new BsonDocument()) });
+                var first = new Patch(new[] { new UpsertEntityChange(new EntityId("MyColl", "ID"), new BsonDocument()) });
+                var second = new Patch(new[] { new UpsertEntityChange(new EntityId("MyColl", "ID"), new BsonDocument()) });
 
                 var pullResult = new PullResult(new List<Patch> { first, second }, new CloudState());
 
@@ -37,7 +37,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
             [Test]
             public void ShouldReturnTrueIfPatchesHaveChanges()
             {
-                var patch = new Patch(new[] { new EntityChange("MyColl", "ID", EntityChangeType.Upsert, new BsonDocument()) });
+                var patch = new Patch(new[] { new UpsertEntityChange(new EntityId("MyColl", "ID"), new BsonDocument()),  });
                 var pullResult = new PullResult(new List<Patch> { patch }, new CloudState());
 
                 Assert.IsTrue(pullResult.HasChanges);
