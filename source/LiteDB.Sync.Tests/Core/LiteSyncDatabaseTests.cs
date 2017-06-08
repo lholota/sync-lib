@@ -169,25 +169,110 @@ namespace LiteDB.Sync.Tests.Core
             [Test]
             public void ResultShouldNotContainDeletedEntities()
             {
-                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[]{ nameof(TestEntity) });
-
-                var coll = this.SyncDatabase.GetCollection<TestEntity>();
-                coll.Insert(new TestEntity(1));
-                coll.Delete(1);
-
-                Assert.IsTrue(this.SyncDatabase.InnerDb.CollectionExists(LiteSyncDatabase.DeletedEntitiesCollectionName));
+                this.CreateDeletedEntitiesCollection();
 
                 Assert.IsFalse(this.SyncDatabase.GetCollectionNames().Contains(LiteSyncDatabase.DeletedEntitiesCollectionName));
             }
         }
 
+        public class WhenRenamingCollection : LiteSyncDatabaseTests
+        {
+            [Test]
+            public void ShouldThrowOnDeletedEntitiesInOldName()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.RenameCollection(LiteSyncDatabase.DeletedEntitiesCollectionName, "Some other"));
+            }
+
+            [Test]
+            public void ShouldThrowOnDeletedEntitiesInNewName()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.RenameCollection("Source", LiteSyncDatabase.DeletedEntitiesCollectionName));
+            }
+
+            [Test]
+            public void ShouldRenameCollection()
+            {
+                this.SyncDatabase.GetCollection<TestEntity>("Name").Insert(new TestEntity(1));
+
+                this.SyncDatabase.RenameCollection("Name", "Another");
+
+                var cnt = this.SyncDatabase.GetCollection<TestEntity>("Another").Count();
+                Assert.AreEqual(1, cnt);
+            }
+        }
+
+        public class WhenGettingCollectionExists : LiteSyncDatabaseTests
+        {
+            [Test]
+            public void ShouldReturnFalseOnDeletedEntities()
+            {
+                this.CreateDeletedEntitiesCollection();
+
+                Assert.IsFalse(this.SyncDatabase.CollectionExists(LiteSyncDatabase.DeletedEntitiesCollectionName));
+            }
+
+            [Test]
+            public void ShouldReturnFalseIfNotExists()
+            {
+                Assert.IsFalse(this.SyncDatabase.CollectionExists("NotExisting"));
+            }
+
+            [Test]
+            public void ShouldReturnTrueIfExists()
+            {
+                this.SyncDatabase.GetCollection<TestEntity>().Insert(new TestEntity(1));
+
+                Assert.IsTrue(this.SyncDatabase.CollectionExists(nameof(TestEntity)));
+            }
+        }
+
+        public class WhenDroppingCollection : LiteSyncDatabaseTests
+        {
+            [Test]
+            public void ShouldThrowOnDeletedEntities()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.DropCollection(LiteSyncDatabase.DeletedEntitiesCollectionName));
+            }
+
+            [Test]
+            public void ShouldDropCollection()
+            {
+                Assert.IsFalse(this.SyncDatabase.CollectionExists(nameof(TestEntity)));
+
+                this.SyncDatabase.GetCollection<TestEntity>().Insert(new TestEntity(1));
+                Assert.IsTrue(this.SyncDatabase.CollectionExists(nameof(TestEntity)));
+
+                this.SyncDatabase.DropCollection(nameof(TestEntity));
+                Assert.IsFalse(this.SyncDatabase.CollectionExists(nameof(TestEntity)));
+            }
+        }
+
+        // TBA: Drop
+
         public class WhenSynchronizing : LiteSyncDatabaseTests
         {
+            /*
+             * Should not execute sync if it's already running
+             * Should raise events
+             * Should ensure indices on all collections
+             */
+
             [Test]
             public void Placeholder()
             {
                 throw new NotImplementedException();
             }
+        }
+
+        protected void CreateDeletedEntitiesCollection()
+        {
+            this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[] { nameof(TestEntity) });
+
+            var coll = this.SyncDatabase.GetCollection<TestEntity>();
+            coll.Insert(new TestEntity(1));
+            coll.Delete(1);
+
+            Assert.IsTrue(this.SyncDatabase.InnerDb.CollectionExists(LiteSyncDatabase.DeletedEntitiesCollectionName));
         }
     }
 }

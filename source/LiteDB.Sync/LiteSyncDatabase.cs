@@ -112,7 +112,7 @@ namespace LiteDB.Sync
 
         public ILiteCollection<T> GetCollection<T>(string name)
         {
-            if (this.IsDeleteEntitiesCollectionName(name))
+            if (this.IsCollectionNameProtected(name))
             {
                 throw new ArgumentException(string.Format(ProtectedCollectionNameExceptionMessage, name));
             }
@@ -126,7 +126,7 @@ namespace LiteDB.Sync
         {
             var name = BsonMapper.Global.ResolveCollectionName.Invoke(typeof(T));
 
-            if (this.IsDeleteEntitiesCollectionName(name))
+            if (this.IsCollectionNameProtected(name))
             {
                 throw new ArgumentException(string.Format(ProtectedCollectionNameExceptionMessage, name));
             }
@@ -138,7 +138,7 @@ namespace LiteDB.Sync
 
         public ILiteCollection<BsonDocument> GetCollection(string name)
         {
-            if (this.IsDeleteEntitiesCollectionName(name))
+            if (this.IsCollectionNameProtected(name))
             {
                 throw new ArgumentException(string.Format(ProtectedCollectionNameExceptionMessage, name));
             }
@@ -150,21 +150,41 @@ namespace LiteDB.Sync
 
         public IEnumerable<string> GetCollectionNames()
         {
-            return this.InnerDb.GetCollectionNames().Where(x => !this.IsDeleteEntitiesCollectionName(x));
+            return this.InnerDb.GetCollectionNames().Where(x => !this.IsCollectionNameProtected(x));
         }
 
         public bool CollectionExists(string name)
         {
+            if (this.IsCollectionNameProtected(name))
+            {
+                return false;
+            }
+
             return this.InnerDb.CollectionExists(name);
         }
 
         public bool DropCollection(string name)
         {
+            if (this.IsCollectionNameProtected(name))
+            {
+                throw new ArgumentException(string.Format(ProtectedCollectionNameExceptionMessage, name));
+            }
+
             return this.InnerDb.DropCollection(name);
         }
 
         public bool RenameCollection(string oldName, string newName)
         {
+            if (this.IsCollectionNameProtected(oldName))
+            {
+                throw new ArgumentException(string.Format(ProtectedCollectionNameExceptionMessage, oldName));
+            }
+
+            if (this.IsCollectionNameProtected(newName))
+            {
+                throw new ArgumentException(string.Format(ProtectedCollectionNameExceptionMessage, newName));
+            }
+
             return this.InnerDb.RenameCollection(oldName, newName);
         }
 
@@ -219,7 +239,7 @@ namespace LiteDB.Sync
             }
         }
 
-        private bool IsDeleteEntitiesCollectionName(string name)
+        private bool IsCollectionNameProtected(string name)
         {
             return string.Equals(name, DeletedEntitiesCollectionName, StringComparison.OrdinalIgnoreCase);
         }
