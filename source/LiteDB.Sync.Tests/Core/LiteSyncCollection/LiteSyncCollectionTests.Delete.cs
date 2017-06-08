@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
+using LiteDB.Sync.Internal;
 using LiteDB.Sync.Tests.TestUtils;
 using NUnit.Framework;
 

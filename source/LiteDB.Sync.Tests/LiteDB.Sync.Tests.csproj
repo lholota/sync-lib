@@ -34,6 +34,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Core\LiteSyncCollection\LiteSyncCollectionTests.PassThrough.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="System.ServiceModel.Activities" />
   </ItemGroup>
 

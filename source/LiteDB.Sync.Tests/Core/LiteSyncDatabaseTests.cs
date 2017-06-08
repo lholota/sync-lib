@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using LiteDB.Sync.Exceptions;
 using LiteDB.Sync.Internal;
 using LiteDB.Sync.Tests.TestUtils;
@@ -65,6 +66,16 @@ namespace LiteDB.Sync.Tests.Core
 
                 Assert.Throws<LiteSyncInvalidEntityException>(() => this.SyncDatabase.GetCollection<NonSyncTestEntity>());
             }
+
+            [Test]
+            public void ShouldThrowIfTryingToGetDeletedEntities()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.GetCollection<LiteSync_Deleted>());
+            }
+
+            // ReSharper disable once ClassNeverInstantiated.Local
+            // ReSharper disable once InconsistentNaming
+            private class LiteSync_Deleted { }
         }
 
         public class WhenGettingCollectionByTypeAndName : LiteSyncDatabaseTests
@@ -100,6 +111,12 @@ namespace LiteDB.Sync.Tests.Core
 
                 Assert.Throws<LiteSyncInvalidEntityException>(() => this.SyncDatabase.GetCollection<NonSyncTestEntity>(CollectionName));
             }
+
+            [Test]
+            public void ShouldThrowIfTryingToGetDeletedEntities()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.GetCollection<TestEntity>(LiteSyncDatabase.DeletedEntitiesCollectionName));
+            }
         }
 
         public class WhenGettingBsonDocCollection : LiteSyncDatabaseTests
@@ -127,6 +144,12 @@ namespace LiteDB.Sync.Tests.Core
                 Assert.IsInstanceOf<LiteSyncCollection<BsonDocument>>(collection);
                 Assert.AreEqual(collection.Name, CollectionName);
             }
+
+            [Test]
+            public void ShouldThrowIfTryingToGetDeletedEntities()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.GetCollection(LiteSyncDatabase.DeletedEntitiesCollectionName));
+            }
         }
 
         public class WhenGettingDeletedEntitiesCollection : LiteSyncDatabaseTests
@@ -138,6 +161,23 @@ namespace LiteDB.Sync.Tests.Core
 
                 Assert.IsInstanceOf<LiteCollection<DeletedEntity>>(collection);
                 Assert.AreEqual(collection.Name, LiteSyncDatabase.DeletedEntitiesCollectionName);
+            }
+        }
+
+        public class WhenGettingCollectionNames : LiteSyncDatabaseTests
+        {
+            [Test]
+            public void ResultShouldNotContainDeletedEntities()
+            {
+                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[]{ nameof(TestEntity) });
+
+                var coll = this.SyncDatabase.GetCollection<TestEntity>();
+                coll.Insert(new TestEntity(1));
+                coll.Delete(1);
+
+                Assert.IsTrue(this.SyncDatabase.InnerDb.CollectionExists(LiteSyncDatabase.DeletedEntitiesCollectionName));
+
+                Assert.IsFalse(this.SyncDatabase.GetCollectionNames().Contains(LiteSyncDatabase.DeletedEntitiesCollectionName));
             }
         }
 

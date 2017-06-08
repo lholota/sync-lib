@@ -11,6 +11,8 @@ namespace LiteDB.Sync
 {
     public class LiteSyncDatabase : ILiteDatabase, ILiteSynchronizable
     {
+        private const string ProtectedCollectionNameExceptionMessage = "The collection name {0} is used by the LiteDB.Sync and cannot be accessed directly.";
+
         internal const string LocalCloudStateId = "LocalHead";
         internal const string SyncStateCollectionName = "LiteSync_State";
         internal const string DeletedEntitiesCollectionName = "LiteSync_Deleted";
@@ -110,6 +112,11 @@ namespace LiteDB.Sync
 
         public ILiteCollection<T> GetCollection<T>(string name)
         {
+            if (this.IsDeleteEntitiesCollectionName(name))
+            {
+                throw new ArgumentException(string.Format(ProtectedCollectionNameExceptionMessage, name));
+            }
+
             var nativeCollection = this.InnerDb.GetCollection<T>(name);
 
             return this.WrapCollectionIfRequired(name, nativeCollection);
@@ -117,14 +124,25 @@ namespace LiteDB.Sync
 
         public ILiteCollection<T> GetCollection<T>()
         {
-            var nativeCollection = this.InnerDb.GetCollection<T>();
             var name = BsonMapper.Global.ResolveCollectionName.Invoke(typeof(T));
+
+            if (this.IsDeleteEntitiesCollectionName(name))
+            {
+                throw new ArgumentException(string.Format(ProtectedCollectionNameExceptionMessage, name));
+            }
+
+            var nativeCollection = this.InnerDb.GetCollection<T>();
 
             return this.WrapCollectionIfRequired(name, nativeCollection);
         }
 
         public ILiteCollection<BsonDocument> GetCollection(string name)
         {
+            if (this.IsDeleteEntitiesCollectionName(name))
+            {
+                throw new ArgumentException(string.Format(ProtectedCollectionNameExceptionMessage, name));
+            }
+
             var nativeCollection = this.InnerDb.GetCollection(name);
 
             return this.WrapCollectionIfRequired(name, nativeCollection, false);
@@ -132,7 +150,7 @@ namespace LiteDB.Sync
 
         public IEnumerable<string> GetCollectionNames()
         {
-            return this.InnerDb.GetCollectionNames();
+            return this.InnerDb.GetCollectionNames().Where(x => !this.IsDeleteEntitiesCollectionName(x));
         }
 
         public bool CollectionExists(string name)
@@ -199,6 +217,11 @@ namespace LiteDB.Sync
 
                 tx.Commit();
             }
+        }
+
+        private bool IsDeleteEntitiesCollectionName(string name)
+        {
+            return string.Equals(name, DeletedEntitiesCollectionName, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

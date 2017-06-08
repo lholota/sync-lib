@@ -12,29 +12,29 @@ namespace LiteDB.Sync
     {
         private readonly LiteSyncDatabase database;
 
-        internal LiteSyncCollection(ILiteCollection<T> underlyingCollection, LiteSyncDatabase database)
+        internal LiteSyncCollection(ILiteCollection<T> NativeCollection, LiteSyncDatabase database)
         {
-            this.UnderlyingCollection = underlyingCollection.UnderlyingCollection;
+            this.NativeCollection = NativeCollection.NativeCollection;
             this.database = database;
         }
 
-        public LiteCollection<T> UnderlyingCollection { get; }
+        public LiteCollection<T> NativeCollection { get; }
 
-        public string Name => this.UnderlyingCollection.Name;
+        public string Name => this.NativeCollection.Name;
 
         public int Count()
         {
-            return this.UnderlyingCollection.Count();
+            return this.NativeCollection.Count();
         }
 
         public int Count(Query query)
         {
-            return this.UnderlyingCollection.Count(query);
+            return this.NativeCollection.Count(query);
         }
 
         public int Count(Expression<Func<T, bool>> predicate)
         {
-            return this.UnderlyingCollection.Count(predicate);
+            return this.NativeCollection.Count(predicate);
         }
 
         public bool Delete(BsonValue id)
@@ -43,7 +43,7 @@ namespace LiteDB.Sync
 
             using (var tx = this.database.BeginTrans())
             {
-                result = this.UnderlyingCollection.Delete(id);
+                result = this.NativeCollection.Delete(id);
 
                 if (result)
                 {
@@ -73,7 +73,7 @@ namespace LiteDB.Sync
 
             using (var tx = this.database.BeginTrans())
             {
-                result = this.UnderlyingCollection.Delete(query, out deletedIds);
+                result = this.NativeCollection.Delete(query, out deletedIds);
 
                 if (deletedIds != null && deletedIds.Count > 0)
                 {
@@ -93,7 +93,7 @@ namespace LiteDB.Sync
 
             using (var tx = this.database.BeginTrans())
             {
-                result = this.UnderlyingCollection.Delete(predicate, out deletedIds);
+                result = this.NativeCollection.Delete(predicate, out deletedIds);
 
                 if (deletedIds != null && deletedIds.Count > 0)
                 {
@@ -109,72 +109,72 @@ namespace LiteDB.Sync
 
         public bool DropIndex(string field)
         {
-            return this.UnderlyingCollection.Delete(field);
+            return this.NativeCollection.DropIndex(field);
         }
 
         public bool EnsureIndex(string field, bool unique = false)
         {
-            return this.UnderlyingCollection.EnsureIndex(field, unique);
+            return this.NativeCollection.EnsureIndex(field, unique);
         }
 
         public bool EnsureIndex<TProp>(Expression<Func<T, TProp>> property, bool unique = false)
         {
-            return this.UnderlyingCollection.EnsureIndex(property, unique);
+            return this.NativeCollection.EnsureIndex(property, unique);
         }
 
         public bool Exists(Query query)
         {
-            return this.UnderlyingCollection.Exists(query);
+            return this.NativeCollection.Exists(query);
         }
 
         public bool Exists(Expression<Func<T, bool>> predicate)
         {
-            return this.UnderlyingCollection.Exists(predicate);
+            return this.NativeCollection.Exists(predicate);
         }
 
         public IEnumerable<T> Find(Query query, int skip = 0, int limit = int.MaxValue)
         {
-            return this.UnderlyingCollection.Find(query, skip, limit);
+            return this.NativeCollection.Find(query, skip, limit);
         }
 
         public IEnumerable<T> Find(Expression<Func<T, bool>> predicate, int skip = 0, int limit = int.MaxValue)
         {
-            return this.UnderlyingCollection.Find(predicate, skip, limit);
+            return this.NativeCollection.Find(predicate, skip, limit);
         }
 
         public IEnumerable<T> FindAll()
         {
-            return this.UnderlyingCollection.FindAll();
+            return this.NativeCollection.FindAll();
         }
 
         public T FindById(BsonValue id)
         {
-            return this.UnderlyingCollection.FindById(id);
+            return this.NativeCollection.FindById(id);
         }
 
         public T FindOne(Query query)
         {
-            return this.UnderlyingCollection.FindOne(query);
+            return this.NativeCollection.FindOne(query);
         }
 
         public T FindOne(Expression<Func<T, bool>> predicate)
         {
-            return this.UnderlyingCollection.FindOne(predicate);
+            return this.NativeCollection.FindOne(predicate);
         }
 
         public IEnumerable<IndexInfo> GetIndexes()
         {
-            return this.UnderlyingCollection.GetIndexes();
+            return this.NativeCollection.GetIndexes();
         }
 
         public LiteCollection<T> Include<TProp>(Expression<Func<T, TProp>> dbref)
         {
-            return this.UnderlyingCollection.Include(dbref);
+            return this.NativeCollection.Include(dbref);
         }
 
         public LiteCollection<T> Include(string path)
         {
-            return this.UnderlyingCollection.Include(path);
+            return this.NativeCollection.Include(path);
         }
 
         public BsonValue Insert(T document)
@@ -185,7 +185,7 @@ namespace LiteDB.Sync
             {
                 this.MarkDirty(document);
 
-                result = this.UnderlyingCollection.Insert(document);
+                result = this.NativeCollection.Insert(document);
 
                 this.RemoveDeletedEntity(result);
 
@@ -201,7 +201,7 @@ namespace LiteDB.Sync
             {
                 this.MarkDirty(document);
 
-                this.UnderlyingCollection.Insert(id, document);
+                this.NativeCollection.Insert(id, document);
 
                 this.RemoveDeletedEntity(id);
 
@@ -217,7 +217,7 @@ namespace LiteDB.Sync
             {
                 this.MarkDirty(docs);
 
-                result = this.UnderlyingCollection.Insert(docs);
+                result = this.NativeCollection.Insert(docs);
 
                 if (result > 0)
                 {
@@ -234,7 +234,7 @@ namespace LiteDB.Sync
         {
             this.MarkDirty(docs);
 
-            return this.UnderlyingCollection.InsertBulk(docs, batchSize, batch =>
+            return this.NativeCollection.InsertBulk(docs, batchSize, batch =>
             {
                 var entityIds = batch.Select(doc => doc["_id"]);
 
@@ -246,68 +246,68 @@ namespace LiteDB.Sync
 
         public long LongCount()
         {
-            return this.UnderlyingCollection.LongCount();
+            return this.NativeCollection.LongCount();
         }
 
         public long LongCount(Query query)
         {
-            return this.UnderlyingCollection.LongCount(query);
+            return this.NativeCollection.LongCount(query);
         }
 
         public long LongCount(Expression<Func<T, bool>> predicate)
         {
-            return this.UnderlyingCollection.LongCount(predicate);
+            return this.NativeCollection.LongCount(predicate);
         }
 
         public BsonValue Max(string field)
         {
-            return this.UnderlyingCollection.Max(field);
+            return this.NativeCollection.Max(field);
         }
 
         public BsonValue Max()
         {
-            return this.UnderlyingCollection.Max();
+            return this.NativeCollection.Max();
         }
 
         public BsonValue Max<TProp>(Expression<Func<T, TProp>> property)
         {
-            return this.UnderlyingCollection.Max(property);
+            return this.NativeCollection.Max(property);
         }
 
         public BsonValue Min(string field)
         {
-            return this.UnderlyingCollection.Min(field);
+            return this.NativeCollection.Min(field);
         }
 
         public BsonValue Min()
         {
-            return this.UnderlyingCollection.Min();
+            return this.NativeCollection.Min();
         }
 
         public BsonValue Min<TProp>(Expression<Func<T, TProp>> property)
         {
-            return this.UnderlyingCollection.Min(property);
+            return this.NativeCollection.Min(property);
         }
 
         public bool Update(T entity)
         {
             this.MarkDirty(entity);
 
-            return this.UnderlyingCollection.Update(entity);
+            return this.NativeCollection.Update(entity);
         }
 
         public bool Update(BsonValue id, T document)
         {
             this.MarkDirty(document);
 
-            return this.UnderlyingCollection.Update(id, document);
+            return this.NativeCollection.Update(id, document);
         }
 
         public int Update(IEnumerable<T> entities)
         {
             this.MarkDirty(entities);
 
-            return this.UnderlyingCollection.Update(entities);
+            return this.NativeCollection.Update(entities);
         }
 
         public bool Upsert(T entity)
@@ -318,7 +318,7 @@ namespace LiteDB.Sync
             {
                 this.MarkDirty(entity);
 
-                result = this.UnderlyingCollection.Upsert(entity);
+                result = this.NativeCollection.Upsert(entity);
 
                 if (result)
                 {
@@ -340,7 +340,7 @@ namespace LiteDB.Sync
             {
                 this.MarkDirty(document);
 
-                result = this.UnderlyingCollection.Upsert(id, document);
+                result = this.NativeCollection.Upsert(id, document);
 
                 if (result)
                 {
@@ -361,7 +361,7 @@ namespace LiteDB.Sync
             {
                 this.MarkDirty(entities);
 
-                result = this.UnderlyingCollection.Upsert(entities);
+                result = this.NativeCollection.Upsert(entities);
 
                 if (result > 0)
                 {
