@@ -21,9 +21,9 @@ namespace LiteDB.Sync.Internal
 
         public async Task<PullResult> Pull(CloudState originalState, CancellationToken ct)
         {
-            var localState = originalState ?? await this.GetLocalCloudState(ct);
+            var localState = originalState ?? await this.GetLocalCloudStateAsync(ct);
 
-            var patches = await this.DownloadPatches(localState.NextPatchId, ct);
+            var patches = await this.DownloadPatchesAsync(localState.NextPatchId, ct);
 
             if (patches.Count > 0)
             {
@@ -44,7 +44,7 @@ namespace LiteDB.Sync.Internal
 
         public async Task Push(CloudState localCloudState, Patch patch, CancellationToken ct)
         {
-            var nextPatchId = await this.GeneratePatchId(ct);
+            var nextPatchId = await this.GeneratePatchIdAsync(ct);
 
             patch.NextPatchId = nextPatchId; // TODO: Wrap the Patch
 
@@ -62,13 +62,13 @@ namespace LiteDB.Sync.Internal
             localCloudState.NextPatchId = nextPatchId;
         }
 
-        private async Task<CloudState> GetLocalCloudState(CancellationToken ct)
+        private async Task<CloudState> GetLocalCloudStateAsync(CancellationToken ct)
         {
             var existingFileStream = await this.provider.DownloadInitFile(ct);
 
             if (existingFileStream == null)
             {
-                var firstPatch = await this.GeneratePatchId(ct);
+                var firstPatch = await this.GeneratePatchIdAsync(ct);
                 var cloudState = new CloudState(firstPatch);
 
                 using (var ms = new MemoryStream())
@@ -101,7 +101,7 @@ namespace LiteDB.Sync.Internal
             }
         }
 
-        private async Task<IList<Patch>> DownloadPatches(string nextPatchId, CancellationToken ct)
+        private async Task<IList<Patch>> DownloadPatchesAsync(string nextPatchId, CancellationToken ct)
         {
             var patches = new List<Patch>();
 
@@ -128,7 +128,7 @@ namespace LiteDB.Sync.Internal
             return patches;
         }
 
-        private async Task<string> GeneratePatchId(CancellationToken ct)
+        private async Task<string> GeneratePatchIdAsync(CancellationToken ct)
         {
             var generator = this.provider as ILiteSyncPatchIdGenerator;
             if (generator != null)

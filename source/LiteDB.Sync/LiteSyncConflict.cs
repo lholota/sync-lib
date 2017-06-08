@@ -55,8 +55,8 @@ namespace LiteDB.Sync
                 return false;
             }
 
-            var localUpsert = (UpsertEntityChange) this.LocalChange;
-            var remoteUpsert = (UpsertEntityChange) this.RemoteChange;
+            var localUpsert = (UpsertEntityChange)this.LocalChange;
+            var remoteUpsert = (UpsertEntityChange)this.RemoteChange;
 
             return localUpsert.Entity.CompareTo(remoteUpsert.Entity) != 0;
         }

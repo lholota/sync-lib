@@ -42,11 +42,11 @@ namespace LiteDB.Sync
                     return;
                 }
 
-                await this.DoConfictHandlingSync(ct, localChanges, pull, cloudState);
+                await this.PerformSynchronizationHandleConflictsAsync(ct, localChanges, pull, cloudState);
             }
         }
 
-        private async Task DoConfictHandlingSync(CancellationToken ct, Patch localChanges, PullResult pull, CloudState cloudState)
+        private async Task PerformSynchronizationHandleConflictsAsync(CancellationToken ct, Patch localChanges, PullResult pull, CloudState cloudState)
         {
             var pushSuccessful = false;
             var retryCounter = 0;
@@ -106,8 +106,6 @@ namespace LiteDB.Sync
                 ct.ThrowIfCancellationRequested();
 
                 this.config.ConflictResolver.Resolve(conflict);
-
-                // This should move to the Conflict logic...
 
                 switch (conflict.Resolution)
                 {

@@ -78,7 +78,9 @@ namespace LiteDB.Sync
         }
 
         public event EventHandler SyncStarted;
+
         public event EventHandler<SyncFinishedEventArgs> SyncFinished;
+
         public event EventHandler<SyncProgressEventArgs> SyncProgressChanged;
 
         public bool IsSyncInProgress
@@ -120,7 +122,7 @@ namespace LiteDB.Sync
 
                 this.OnSyncStarting();
 
-                this.syncInProgressTask = Task.Run(async () => await this.ExecuteSync(synchronizer, ct), ct);
+                this.syncInProgressTask = Task.Run(async () => await this.ExecuteSynchronizationAsync(synchronizer, ct), ct);
 
                 return this.syncInProgressTask;
             }
@@ -265,7 +267,7 @@ namespace LiteDB.Sync
             return string.Equals(name, DeletedEntitiesCollectionName, StringComparison.OrdinalIgnoreCase);
         }
 
-        private async Task ExecuteSync(ILiteSynchronizer synchronizer, CancellationToken ct)
+        private async Task ExecuteSynchronizationAsync(ILiteSynchronizer synchronizer, CancellationToken ct)
         {
             this.OnSyncStarting();
 
