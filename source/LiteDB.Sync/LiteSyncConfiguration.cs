@@ -1,13 +1,11 @@
-﻿using System.Collections.Generic;
-
-namespace LiteDB.Sync
+﻿namespace LiteDB.Sync
 {
     public class LiteSyncConfiguration : ILiteSyncConfiguration
     {
         public LiteSyncConfiguration(
             ILiteSyncCloudProvider cloudProvider, 
             ILiteSyncConflictResolver conflictResolver, 
-            IEnumerable<string> syncedCollections)
+            string[] syncedCollections)
         {
             this.CloudProvider = cloudProvider;
             this.ConflictResolver = conflictResolver;
@@ -18,7 +16,7 @@ namespace LiteDB.Sync
 
         public ILiteSyncConflictResolver ConflictResolver { get; }
 
-        public IEnumerable<string> SyncedCollections { get; }
+        public string[] SyncedCollections { get; }
 
         // Calls before upload and after apply?
     }

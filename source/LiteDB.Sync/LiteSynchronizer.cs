@@ -6,22 +6,22 @@ using LiteDB.Sync.Internal;
 
 namespace LiteDB.Sync
 {
-    internal class LiteSynchronizer
+    internal class LiteSynchronizer : ILiteSynchronizer
     {
         private const int MaxPushRetryCount = 5;
 
-        private readonly LiteDatabase db;
+        private readonly ILiteDatabase db;
         private readonly ILiteSyncConfiguration config;
         private readonly ICloudClient cloudClient;
 
-        internal LiteSynchronizer(LiteDatabase db, ILiteSyncConfiguration config, ICloudClient cloudClient)
+        internal LiteSynchronizer(ILiteDatabase db, ILiteSyncConfiguration config, ICloudClient cloudClient)
         {
             this.cloudClient = cloudClient;
             this.config = config;
             this.db = db;
         }
 
-        internal async Task Synchronize(CancellationToken ct)
+        public async Task SynchronizeAsync(CancellationToken ct)
         {
             var cloudState = this.db.GetLocalCloudState();
             ct.ThrowIfCancellationRequested();

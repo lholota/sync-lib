@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace LiteDB.Sync
+﻿namespace LiteDB.Sync
 {
     public interface ILiteSyncConfiguration
     {
@@ -8,6 +6,6 @@ namespace LiteDB.Sync
 
         ILiteSyncConflictResolver ConflictResolver { get; }
 
-        IEnumerable<string> SyncedCollections { get; }
+        string[] SyncedCollections { get; }
     }
 }

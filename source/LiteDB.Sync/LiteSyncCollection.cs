@@ -12,9 +12,9 @@ namespace LiteDB.Sync
     {
         private readonly LiteSyncDatabase database;
 
-        internal LiteSyncCollection(ILiteCollection<T> NativeCollection, LiteSyncDatabase database)
+        internal LiteSyncCollection(ILiteCollection<T> nativeCollection, LiteSyncDatabase database)
         {
-            this.NativeCollection = NativeCollection.NativeCollection;
+            this.NativeCollection = nativeCollection.NativeCollection;
             this.database = database;
         }
 

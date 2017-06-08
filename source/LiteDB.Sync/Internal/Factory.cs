@@ -6,5 +6,10 @@
         {
             return new CloudClient(provider);
         }
+
+        public ILiteSynchronizer CreateSynchronizer(ILiteDatabase db, ILiteSyncConfiguration config, ICloudClient cloudClient)
+        {
+            return new LiteSynchronizer(db, config, cloudClient);
+        }
     }
 }

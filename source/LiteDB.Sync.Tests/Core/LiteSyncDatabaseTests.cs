@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using LiteDB.Sync.Exceptions;
 using LiteDB.Sync.Internal;
 using LiteDB.Sync.Tests.TestUtils;
@@ -13,19 +15,23 @@ namespace LiteDB.Sync.Tests.Core
     [TestFixture]
     public class LiteSyncDatabaseTests
     {
+        internal Mock<IFactory> FactoryMock;
+
         protected MemoryStream DbStream;
         protected LiteSyncDatabase SyncDatabase;
         protected Mock<ILiteSyncConfiguration> SyncConfigMock;
 
-        // TBA: Ensure indices - lazilly on any operation
-
         [SetUp]
-        public void Setup()
+        public virtual void Setup()
         {
             this.DbStream = new MemoryStream();
+            this.FactoryMock = new Mock<IFactory>();
             this.SyncConfigMock = new Mock<ILiteSyncConfiguration>();
 
-            this.SyncDatabase = new LiteSyncDatabase(this.SyncConfigMock.Object, this.DbStream);
+            this.SyncDatabase = new LiteSyncDatabase(
+                this.SyncConfigMock.Object,
+                this.DbStream,
+                this.FactoryMock.Object);
         }
 
         [TearDown]
@@ -43,7 +49,7 @@ namespace LiteDB.Sync.Tests.Core
                 this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new string[0]);
 
                 var collection = this.SyncDatabase.GetCollection<TestEntity>();
-                
+
                 Assert.IsInstanceOf<LiteCollection<TestEntity>>(collection);
                 Assert.AreEqual(collection.Name, nameof(TestEntity));
             }
@@ -51,7 +57,7 @@ namespace LiteDB.Sync.Tests.Core
             [Test]
             public void ShouldReturnSyncCollectionIfSynced()
             {
-                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[]{ nameof(TestEntity) });
+                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[] { nameof(TestEntity) });
 
                 var collection = this.SyncDatabase.GetCollection<TestEntity>();
 
@@ -247,20 +253,135 @@ namespace LiteDB.Sync.Tests.Core
             }
         }
 
-        // TBA: Drop
-
         public class WhenSynchronizing : LiteSyncDatabaseTests
         {
-            /*
-             * Should not execute sync if it's already running
-             * Should raise events
-             * Should ensure indices on all collections
-             */
+            private Mock<ILiteSynchronizer> synchronizerMock;
+
+            public override void Setup()
+            {
+                base.Setup();
+
+                this.synchronizerMock = new Mock<ILiteSynchronizer>();
+
+                this.FactoryMock.Setup(x => x.CreateSynchronizer(It.IsAny<ILiteDatabase>(),
+                                                                 It.IsAny<ILiteSyncConfiguration>(),
+                                                                 It.IsAny<ICloudClient>()))
+                                .Returns(this.synchronizerMock.Object);
+            }
 
             [Test]
-            public void Placeholder()
+            public async Task ShouldStartSynchronization()
             {
-                throw new NotImplementedException();
+                this.synchronizerMock.Setup(x => x.SynchronizeAsync(It.IsAny<CancellationToken>())).Returns(Task.FromResult(0));
+
+                await this.SyncDatabase.SynchronizeAsync();
+
+                this.synchronizerMock.VerifyAll();
+            }
+
+            [Test]
+            public void ShouldNotStartSyncIfAlreadyInProgress()
+            {
+                var evt = new ManualResetEvent(false);
+
+                this.synchronizerMock
+                    .Setup(x => x.SynchronizeAsync(It.IsAny<CancellationToken>()))
+                    .Callback<CancellationToken>(x => evt.WaitOne())
+                    .Returns(Task.FromResult(0));
+
+                var firstSyncExecTask = this.SyncDatabase.SynchronizeAsync();
+                var secondSyncExecTask = this.SyncDatabase.SynchronizeAsync();
+
+                Assert.AreEqual(firstSyncExecTask, secondSyncExecTask);
+
+                evt.Set();
+
+                firstSyncExecTask.Wait();
+
+                this.synchronizerMock.Verify(x => x.SynchronizeAsync(It.IsAny<CancellationToken>()), Times.Once);
+            }
+
+            [Test]
+            public async Task ShouldRaiseSyncStartedEvent()
+            {
+                var evtCalled = false;
+
+                this.SyncDatabase.SyncStarted += (sender, e) => evtCalled = true;
+                this.synchronizerMock.Setup(x => x.SynchronizeAsync(It.IsAny<CancellationToken>())).Returns(Task.FromResult(0));
+
+                await this.SyncDatabase.SynchronizeAsync();
+
+                Assert.IsTrue(evtCalled);
+            }
+
+            [Test]
+            public async Task ShouldRaiseSyncFinishedEvent()
+            {
+                var evtCalled = false;
+
+                this.SyncDatabase.SyncFinished += (sender, e) => evtCalled = true;
+                this.synchronizerMock.Setup(x => x.SynchronizeAsync(It.IsAny<CancellationToken>())).Returns(Task.FromResult(0));
+
+                await this.SyncDatabase.SynchronizeAsync();
+
+                Assert.IsTrue(evtCalled);
+            }
+
+            [Test]
+            public async Task ShouldRaiseSyncFinishedEventWithErrorDetailsIfSyncFails()
+            {
+                var evtCalled = false;
+
+                this.SyncDatabase.SyncFinished += (sender, e) =>
+                {
+                    evtCalled = true;
+
+                    Assert.IsFalse(e.Successful);
+                    Assert.IsNotNull(e.Error);
+                };
+
+                this.synchronizerMock
+                    .Setup(x => x.SynchronizeAsync(It.IsAny<CancellationToken>()))
+                    .Throws(new Exception("Dummy ex"));
+
+                await this.SyncDatabase.SynchronizeAsync();
+
+                Assert.IsTrue(evtCalled);
+            }
+
+            [Test]
+            public async Task ShouldEnsureIndices()
+            {
+                this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[] { nameof(TestEntity) });
+
+                var collection = this.SyncDatabase.InnerDb.GetCollection<TestEntity>();
+                Assert.IsFalse(collection.GetIndexes().Any(x => x.Field == nameof(ILiteSyncEntity.RequiresSync)));
+
+                await this.SyncDatabase.SynchronizeAsync();
+
+                Assert.IsTrue(collection.GetIndexes().Any(x => x.Field == nameof(ILiteSyncEntity.RequiresSync)));
+            }
+
+            [Test]
+            public void ShouldReportSyncInProgress()
+            {
+                Assert.IsFalse(this.SyncDatabase.IsSyncInProgress);
+
+                var evt = new ManualResetEvent(false);
+
+                this.synchronizerMock
+                    .Setup(x => x.SynchronizeAsync(It.IsAny<CancellationToken>()))
+                    .Callback<CancellationToken>(x => evt.WaitOne())
+                    .Returns(Task.FromResult(0));
+
+                var firstSyncExecTask = this.SyncDatabase.SynchronizeAsync();
+
+                Assert.IsTrue(this.SyncDatabase.IsSyncInProgress);
+
+                evt.Set();
+                firstSyncExecTask.Wait();
+
+                Assert.IsFalse(this.SyncDatabase.IsSyncInProgress);
             }
         }
 

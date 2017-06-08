@@ -18,9 +18,10 @@ namespace LiteDB.Sync
         internal const string DeletedEntitiesCollectionName = "LiteSync_Deleted";
 
         private Task syncInProgressTask;
-        
-        private readonly ILiteSyncConfiguration syncConfig;
+
+        private readonly IFactory factory;
         private readonly ICloudClient cloudClient;
+        private readonly ILiteSyncConfiguration syncConfig;
         private readonly object syncControlLock = new object();
 
         /// <summary>
@@ -72,6 +73,24 @@ namespace LiteDB.Sync
             this.cloudClient = factory.CreateCloudClient(syncConfig.CloudProvider);
             this.syncConfig = syncConfig;
             this.InnerDb = db;
+
+            this.factory = factory;
+        }
+
+        public event EventHandler SyncStarted;
+        public event EventHandler<SyncFinishedEventArgs> SyncFinished;
+        public event EventHandler<SyncProgressEventArgs> SyncProgressChanged;
+
+        public bool IsSyncInProgress
+        {
+            get
+            {
+                lock (this.syncControlLock)
+                {
+                    return this.syncInProgressTask != null
+                        && !this.syncInProgressTask.IsCompleted;
+                }
+            }
         }
 
         public Logger Log => this.InnerDb.Log;
@@ -86,7 +105,7 @@ namespace LiteDB.Sync
 
         public IEnumerable<string> SyncedCollectionNames => this.syncConfig.SyncedCollections;
 
-        public Task SynchronizeAsync(CancellationToken ct)
+        public Task SynchronizeAsync(CancellationToken ct = default(CancellationToken))
         {
             lock (this.syncControlLock)
             {
@@ -94,12 +113,14 @@ namespace LiteDB.Sync
 
                 if (this.syncInProgressTask != null)
                 {
-                    return Task.FromResult(0);
+                    return this.syncInProgressTask;
                 }
 
-                var ctx = new LiteSynchronizer(this.InnerDb, this.syncConfig, this.cloudClient);
+                var synchronizer = this.factory.CreateSynchronizer(this.InnerDb, this.syncConfig, this.cloudClient);
 
-                this.syncInProgressTask = ctx.Synchronize(ct);
+                this.OnSyncStarting();
+
+                this.syncInProgressTask = Task.Run(async () => await this.ExecuteSync(synchronizer, ct), ct);
 
                 return this.syncInProgressTask;
             }
@@ -242,6 +263,37 @@ namespace LiteDB.Sync
         private bool IsCollectionNameProtected(string name)
         {
             return string.Equals(name, DeletedEntitiesCollectionName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task ExecuteSync(ILiteSynchronizer synchronizer, CancellationToken ct)
+        {
+            this.OnSyncStarting();
+
+            try
+            {
+                await synchronizer.SynchronizeAsync(ct);
+
+                this.OnSyncFinished();   
+            }
+            catch (Exception ex)
+            {
+                this.OnSyncFinished(ex);
+            }
+        }
+
+        private void OnSyncStarting()
+        {
+            this.SyncStarted?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void OnSyncFinished(Exception ex = null)
+        {
+            var args = new SyncFinishedEventArgs
+            {
+                Error = ex
+            };
+
+            this.SyncFinished?.Invoke(this, args);
         }
     }
 }
