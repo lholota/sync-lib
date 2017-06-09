@@ -478,12 +478,46 @@ namespace LiteDB.Sync.Tests.Core
                 Assert.AreEqual(1, patch.Changes.Count());
                 Assert.IsInstanceOf<DeleteEntityChange>(patch.Changes.Single());
             }
+        }
 
+        public class WhenApplyingChanges : LiteSyncDatabaseTests
+        {
+            [Test]
+            public void ShouldApplyUpsertChanges()
+            {
+                var doc = new BsonDocument
+                {
+                    ["_id"] = 1,
+                    [nameof(TestEntity.Text)] = "Hello"
+                };
 
+                var change = new UpsertEntityChange(new EntityId("TestEntity", 1), doc);
+                var patch = new Patch(new[] { change });
 
-            /*
-             * Should return deleted entities
-             */
+                var collection = this.SyncDatabase.GetCollection<TestEntity>();
+
+                Assert.AreEqual(0, collection.Count());
+
+                ((ILiteSyncDatabase)this.SyncDatabase).ApplyChanges(patch, CancellationToken.None);
+
+                Assert.AreEqual(1, collection.Count());
+            }
+
+            [Test]
+            public void ShouldApplyDeleteChanges()
+            {
+                var change = new DeleteEntityChange(new EntityId(nameof(TestEntity), 1));
+                var patch = new Patch(new[] { change });
+
+                var entity = new TestEntity(1);
+                var collection = this.SyncDatabase.GetCollection<TestEntity>();
+
+                collection.Insert(entity);
+
+                ((ILiteSyncDatabase)this.SyncDatabase).ApplyChanges(patch, CancellationToken.None);
+
+                Assert.AreEqual(0, collection.Count());
+            }
         }
 
         // TBA: Add tests for ILiteSyncDatabase explicit methods

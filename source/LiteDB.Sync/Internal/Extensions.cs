@@ -14,5 +14,10 @@ namespace LiteDB.Sync.Internal
         {
             return typeof(ILiteSyncEntity).IsAssignableFrom(type);
         }
+
+        internal static BsonValue GetId(this BsonDocument doc)
+        {
+            return doc["_id"];
+        }
     }
 }

@@ -12,6 +12,11 @@ namespace LiteDB.Sync
                 throw new ArgumentException("The conflicting changes must be both with the same EntityId.", nameof(localChange));
             }
 
+            if (localChange is DeleteEntityChange && remoteChange is DeleteEntityChange)
+            {
+                // throw new ArgumentException("Can");
+            }
+
             this.LocalChange = localChange;
             this.RemoteChange = remoteChange;
             this.Resolution = ConflictResolution.None;
@@ -39,7 +44,10 @@ namespace LiteDB.Sync
 
         public void ResolveMerged(BsonDocument mergedEntity)
         {
-            // Should verify the ID !!!
+            if (mergedEntity.GetId() != this.EntityId.BsonId)
+            {
+                throw new ArgumentException("The merged entity must have the same id as the conflicting changes.");
+            }
 
             this.Resolution = ConflictResolution.Merge;
             this.MergedEntity = mergedEntity;

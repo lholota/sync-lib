@@ -4,22 +4,7 @@ using Newtonsoft.Json;
 namespace LiteDB.Sync.Internal
 {
     public class EntityId
-    { 
-        internal static EntityId FromString(string str)
-        {
-            return JsonSerialization.DeserializeFromString<EntityId>(str);
-        }
-
-        internal static string GetEntityIdString(string collectionName, BsonValue id)
-        {
-            return JsonSerialization.SerializeToString(new EntityId(collectionName, id));
-        }
-
-        // For BsonMapper
-        //public EntityId()
-        //{
-        //}
-
+    {
         public EntityId(string collectionName, BsonValue id)
         {
             this.Validate(collectionName, id);

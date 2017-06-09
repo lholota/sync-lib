@@ -67,6 +67,20 @@ namespace LiteDB.Sync.Tests.Core
                 Assert.AreEqual(LiteSyncConflict.ConflictResolution.Merge, conflict.Resolution);
                 Assert.AreEqual(mergedDoc, conflict.MergedEntity);
             }
+
+            [Test]
+            public void ShouldThrowIfMergedEntityHasDifferentId()
+            {
+                var localChange = this.CreateChange(2);
+                var remoteChange = this.CreateChange(2);
+
+                var conflict = new LiteSyncConflict(localChange, remoteChange);
+
+                var doc = new BsonDocument();
+                doc["_id"] = new BsonValue(99);
+
+                Assert.Throws<ArgumentException>(() => conflict.ResolveMerged(doc));
+            }
         }
 
         public class WhenCheckingHasDifferences : LiteSyncConflictTests
