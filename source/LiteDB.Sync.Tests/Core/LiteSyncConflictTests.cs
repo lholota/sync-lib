@@ -56,12 +56,14 @@ namespace LiteDB.Sync.Tests.Core
             [Test]
             public void ShouldSetResolutionAndMergedEntityWhenKeepingMerged()
             {
-                var local = this.CreateChange();
-                var remote = this.CreateChange();
+                var local = this.CreateChange(2);
+                var remote = this.CreateChange(2);
 
                 var conflict = new LiteSyncConflict(local, remote);
 
                 var mergedDoc = new BsonDocument();
+                mergedDoc["_id"] = 2;
+
                 conflict.ResolveMerged(mergedDoc);
 
                 Assert.AreEqual(LiteSyncConflict.ConflictResolution.Merge, conflict.Resolution);
