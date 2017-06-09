@@ -7,5 +7,7 @@
         ILiteSyncConflictResolver ConflictResolver { get; }
 
         string[] SyncedCollections { get; }
+
+        bool IsValid { get; }
     }
 }

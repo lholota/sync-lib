@@ -1,26 +1,26 @@
-﻿using System.Linq;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB.Sync.Exceptions;
-using LiteDB.Sync.Internal;
 
-namespace LiteDB.Sync
+namespace LiteDB.Sync.Internal
 {
-    internal class LiteSynchronizer : ILiteSynchronizer
+    internal class Synchronizer : ISynchronizer
     {
-        private const int MaxPushRetryCount = 5;
+        private const int MaxPushRetryCount = 3;
 
-        private readonly ILiteDatabase db;
+        private readonly ILiteSyncDatabase db;
         private readonly ILiteSyncConfiguration config;
         private readonly ICloudClient cloudClient;
 
-        internal LiteSynchronizer(ILiteDatabase db, ILiteSyncConfiguration config, ICloudClient cloudClient)
+        internal Synchronizer(ILiteSyncDatabase db, ILiteSyncConfiguration config, ICloudClient cloudClient)
         {
             this.cloudClient = cloudClient;
             this.config = config;
             this.db = db;
         }
 
+        // TBA: Should delete deleted entities locally when applying changes + update RequiresSync = false
         public async Task SynchronizeAsync(CancellationToken ct)
         {
             var cloudState = this.db.GetLocalCloudState();
@@ -28,9 +28,9 @@ namespace LiteDB.Sync
 
             var pull = await this.cloudClient.Pull(cloudState, ct);
 
-            using (this.db.Engine.Locker.Exclusive())
+            using (this.db.LockExclusive())
             {
-                var localChanges = this.GetLocalChanges(ct);
+                var localChanges = this.db.GetLocalChanges(ct);
 
                 if (!pull.HasChanges && !localChanges.HasChanges)
                 {
@@ -48,8 +48,9 @@ namespace LiteDB.Sync
 
         private async Task PerformSynchronizationHandleConflictsAsync(CancellationToken ct, Patch localChanges, PullResult pull, CloudState cloudState)
         {
+            var retryCounter = 1;
             var pushSuccessful = false;
-            var retryCounter = 0;
+            var cloudStateToSave = pull.CloudState;
 
             using (var tx = this.db.BeginTrans())
             {
@@ -57,12 +58,22 @@ namespace LiteDB.Sync
                 {
                     this.ResolveConflicts(localChanges, pull.RemotePatch, ct);
 
-                    this.ApplyChangesToLocalDb(pull.RemotePatch);
+                    if (pull.HasChanges)
+                    {
+                        this.db.ApplyChanges(pull.RemotePatch, ct);
+
+                        // Pull brought changes or push will overwrite the state with later patchId
+                        cloudStateToSave = pull.CloudState;
+                    }
+
+                    if (!localChanges.HasChanges)
+                    {
+                        break;
+                    }
 
                     try
                     {
-                        await this.cloudClient.Push(cloudState, localChanges, ct);
-
+                        cloudStateToSave = await this.cloudClient.Push(cloudState, localChanges, ct);
                         pushSuccessful = true;
                     }
                     catch (LiteSyncConflictOccuredException ex)
@@ -77,35 +88,29 @@ namespace LiteDB.Sync
                     }
                 }
 
-                this.db.SaveLocalCloudState(cloudState);
-                tx.Commit();
-            }
-        }
-
-        private void ApplyChangesToLocalDb(Patch remoteChanges) // TODO: Add ct?
-        {
-            var groupped = remoteChanges.Changes.GroupBy(x => x.EntityId.CollectionName, x => x);
-
-            foreach (var group in groupped)
-            {
-                var collection = this.db.GetCollection(group.Key);
-
-                foreach (var change in group)
+                if (cloudStateToSave != null)
                 {
-                    change.Apply(collection);
+                    this.db.SaveLocalCloudState(cloudStateToSave);
                 }
+
+                tx.Commit();
             }
         }
 
         private void ResolveConflicts(Patch localChanges, Patch remoteChanges, CancellationToken ct)
         {
+            if (!localChanges.HasChanges || !remoteChanges.HasChanges)
+            {
+                return;
+            }
+
             var conflicts = Patch.GetConflicts(localChanges, remoteChanges);
 
             foreach (var conflict in conflicts)
             {
                 ct.ThrowIfCancellationRequested();
 
-                this.config.ConflictResolver.Resolve(conflict);
+                this.config.ConflictResolver.Resolve(conflict, this.db.Mapper);
 
                 switch (conflict.Resolution)
                 {
@@ -122,32 +127,10 @@ namespace LiteDB.Sync
 
                     case LiteSyncConflict.ConflictResolution.Merge:
                         localChanges.ReplaceChange(conflict.EntityId, conflict.MergedEntity);
-                        localChanges.ReplaceChange(conflict.EntityId, conflict.MergedEntity);
+                        remoteChanges.ReplaceChange(conflict.EntityId, conflict.MergedEntity);
                         break;
                 }
             }
-        }
-
-        private Patch GetLocalChanges(CancellationToken ct)
-        {
-            var patch = new Patch();
-
-            foreach (var collectionName in this.config.SyncedCollections)
-            {
-                var collection = this.db.GetCollection(collectionName);
-                var dirtyEntities = collection.FindDirtyEntities();
-
-                patch.AddUpsertChanges(collectionName, dirtyEntities);
-
-                var delCollection = this.db.GetCollection<DeletedEntity>(LiteSyncDatabase.DeletedEntitiesCollectionName);
-                var deletedEntities = delCollection.FindAll();
-
-                patch.AddDeleteChanges(deletedEntities);
-
-                ct.ThrowIfCancellationRequested();
-            }
-
-            return patch;
         }
     }
 }

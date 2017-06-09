@@ -1,9 +1,9 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace LiteDB.Sync
+namespace LiteDB.Sync.Internal
 {
-    internal interface ILiteSynchronizer
+    internal interface ISynchronizer
     {
         Task SynchronizeAsync(CancellationToken ct);
     }

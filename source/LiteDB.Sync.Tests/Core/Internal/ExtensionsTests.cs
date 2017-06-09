@@ -24,44 +24,44 @@ namespace LiteDB.Sync.Tests.Core.Internal
             }
         }
 
-        public class WhenGettingLocalCloudState : ExtensionsTests
-        {
-            [Test]
-            public void ShouldQueryCorrectCollectionAndId()
-            {
-                var dbMock = new Mock<ILiteDatabase>();
-                var collMock = new Mock<ILiteCollection<CloudState>>();
-                var expectedResult = new CloudState();
+        //public class WhenGettingLocalCloudState : ExtensionsTests
+        //{
+        //    [Test]
+        //    public void ShouldQueryCorrectCollectionAndId()
+        //    {
+        //        var dbMock = new Mock<ILiteDatabase>();
+        //        var collMock = new Mock<ILiteCollection<CloudState>>();
+        //        var expectedResult = new CloudState();
 
-                dbMock.Setup(x => x.GetCollection<CloudState>(LiteSyncDatabase.SyncStateCollectionName)).Returns(collMock.Object);
-                collMock.Setup(x => x.FindById(LiteSyncDatabase.LocalCloudStateId)).Returns(expectedResult);
+        //        dbMock.Setup(x => x.GetCollection<CloudState>(LiteSyncDatabase.SyncStateCollectionName)).Returns(collMock.Object);
+        //        collMock.Setup(x => x.FindById(LiteSyncDatabase.LocalCloudStateId)).Returns(expectedResult);
 
-                var actual = dbMock.Object.GetLocalCloudState();
+        //        var actual = dbMock.Object.GetLocalCloudState();
 
-                Assert.AreEqual(expectedResult, actual);
+        //        Assert.AreEqual(expectedResult, actual);
 
-                collMock.VerifyAll();
-                dbMock.VerifyAll();
-            }
-        }
+        //        collMock.VerifyAll();
+        //        dbMock.VerifyAll();
+        //    }
+        //}
 
-        public class WhenSavingLocalCloudState : ExtensionsTests
-        {
-            [Test]
-            public void ShouldSaveWithCorrectCollectionAndId()
-            {
-                var dbMock = new Mock<ILiteDatabase>();
-                var collMock = new Mock<ILiteCollection<CloudState>>();
-                var state = new CloudState();
+        //public class WhenSavingLocalCloudState : ExtensionsTests
+        //{
+        //    [Test]
+        //    public void ShouldSaveWithCorrectCollectionAndId()
+        //    {
+        //        var dbMock = new Mock<ILiteDatabase>();
+        //        var collMock = new Mock<ILiteCollection<CloudState>>();
+        //        var state = new CloudState();
 
-                dbMock.Setup(x => x.GetCollection<CloudState>(LiteSyncDatabase.SyncStateCollectionName)).Returns(collMock.Object);
-                collMock.Setup(x => x.Upsert(LiteSyncDatabase.LocalCloudStateId, state));
+        //        dbMock.Setup(x => x.GetCollection<CloudState>(LiteSyncDatabase.SyncStateCollectionName)).Returns(collMock.Object);
+        //        collMock.Setup(x => x.Upsert(LiteSyncDatabase.LocalCloudStateId, state));
 
-                dbMock.Object.SaveLocalCloudState(state);
+        //        dbMock.Object.SaveLocalCloudState(state);
 
-                collMock.VerifyAll();
-                dbMock.VerifyAll();
-            }
-        }
+        //        collMock.VerifyAll();
+        //        dbMock.VerifyAll();
+        //    }
+        // }
     }
 }

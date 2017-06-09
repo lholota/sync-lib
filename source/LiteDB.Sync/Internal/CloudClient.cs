@@ -42,7 +42,7 @@ namespace LiteDB.Sync.Internal
             return new PullResult();
         }
 
-        public async Task Push(CloudState localCloudState, Patch patch, CancellationToken ct)
+        public async Task<CloudState> Push(CloudState localCloudState, Patch patch, CancellationToken ct)
         {
             var nextPatchId = await this.GeneratePatchIdAsync(ct);
 
@@ -59,7 +59,7 @@ namespace LiteDB.Sync.Internal
                 await this.provider.UploadPatchFile(localCloudState.NextPatchId, ms);
             }
 
-            localCloudState.NextPatchId = nextPatchId;
+            return new CloudState(nextPatchId);
         }
 
         private async Task<CloudState> GetLocalCloudStateAsync(CancellationToken ct)

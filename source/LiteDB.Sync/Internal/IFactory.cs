@@ -3,6 +3,6 @@
     {
         ICloudClient CreateCloudClient(ILiteSyncCloudProvider provider);
 
-        ILiteSynchronizer CreateSynchronizer(ILiteDatabase db, ILiteSyncConfiguration config, ICloudClient cloudClient);
+        ISynchronizer CreateSynchronizer(ILiteSyncDatabase db, ILiteSyncConfiguration config, ICloudClient cloudClient);
     }
 }

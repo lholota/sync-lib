@@ -2,6 +2,6 @@
 {
     public interface ILiteSyncConflictResolver
     {
-        void Resolve(LiteSyncConflict conflict);
+        void Resolve(LiteSyncConflict conflict, BsonMapper mapper);
     }
 }

@@ -9,7 +9,7 @@ using LiteDB.Sync.Internal;
 
 namespace LiteDB.Sync
 {
-    public class LiteSyncDatabase : ILiteDatabase, ILiteSynchronizable
+    public class LiteSyncDatabase : ILiteDatabase, ILiteSynchronizable, ILiteSyncDatabase
     {
         private const string ProtectedCollectionNameExceptionMessage = "The collection name {0} is used by the LiteDB.Sync and cannot be accessed directly.";
 
@@ -70,6 +70,16 @@ namespace LiteDB.Sync
 
         private LiteSyncDatabase(ILiteSyncConfiguration syncConfig, LiteDatabase db, IFactory factory)
         {
+            if (syncConfig == null)
+            {
+                throw new ArgumentNullException(nameof(syncConfig));
+            }
+
+            if (!syncConfig.IsValid)
+            {
+                throw new ArgumentException($"The provided {nameof(ILiteSyncConfiguration)} is invalid.");
+            }
+
             this.cloudClient = factory.CreateCloudClient(syncConfig.CloudProvider);
             this.syncConfig = syncConfig;
             this.InnerDb = db;
@@ -80,8 +90,6 @@ namespace LiteDB.Sync
         public event EventHandler SyncStarted;
 
         public event EventHandler<SyncFinishedEventArgs> SyncFinished;
-
-        public event EventHandler<SyncProgressEventArgs> SyncProgressChanged;
 
         public bool IsSyncInProgress
         {
@@ -95,18 +103,38 @@ namespace LiteDB.Sync
             }
         }
 
+        /// <summary>
+        /// Get logger class instance
+        /// </summary>
         public Logger Log => this.InnerDb.Log;
 
+        /// <summary>
+        /// Get current instance of BsonMapper used in this database instance (can be BsonMapper.Global)
+        /// </summary>
         public BsonMapper Mapper => this.InnerDb.Mapper;
 
         public LiteEngine Engine => this.InnerDb.Engine;
 
+        /// <summary>
+        /// Returns a special collection for storage files/stream inside datafile
+        /// </summary>
         public LiteStorage FileStorage => this.InnerDb.FileStorage;
 
         internal LiteDatabase InnerDb { get; }
 
+        /// <summary>
+        /// Names of the collections which are synchronized
+        /// </summary>
         public IEnumerable<string> SyncedCollectionNames => this.syncConfig.SyncedCollections;
 
+        /// <summary>
+        /// Starts synchronization to the cloud. If the synchronization is already running
+        /// it will return an empty task which immediately finishes. 
+        /// In case you need to cancel the synchronization, please note that you need to wait for the returned task 
+        /// and that it may take up to several seconds (not all parts of the sync can be just stopped halfway through))
+        /// </summary>
+        /// <param name="ct">Cancellation token</param>
+        /// <returns><see cref="Task"/></returns>
         public Task SynchronizeAsync(CancellationToken ct = default(CancellationToken))
         {
             lock (this.syncControlLock)
@@ -115,10 +143,10 @@ namespace LiteDB.Sync
 
                 if (this.syncInProgressTask != null)
                 {
-                    return this.syncInProgressTask;
+                    return Task.FromResult(0);
                 }
 
-                var synchronizer = this.factory.CreateSynchronizer(this.InnerDb, this.syncConfig, this.cloudClient);
+                var synchronizer = this.factory.CreateSynchronizer(this, this.syncConfig, this.cloudClient);
 
                 this.OnSyncStarting();
 
@@ -267,7 +295,7 @@ namespace LiteDB.Sync
             return string.Equals(name, DeletedEntitiesCollectionName, StringComparison.OrdinalIgnoreCase);
         }
 
-        private async Task ExecuteSynchronizationAsync(ILiteSynchronizer synchronizer, CancellationToken ct)
+        private async Task ExecuteSynchronizationAsync(ISynchronizer synchronizer, CancellationToken ct)
         {
             this.OnSyncStarting();
 
@@ -296,6 +324,60 @@ namespace LiteDB.Sync
             };
 
             this.SyncFinished?.Invoke(this, args);
+        }
+
+        CloudState ILiteSyncDatabase.GetLocalCloudState()
+        {
+            return this.InnerDb.GetCollection<CloudState>(SyncStateCollectionName).FindById(LocalCloudStateId);
+        }
+
+        void ILiteSyncDatabase.SaveLocalCloudState(CloudState cloudState)
+        {
+            this.InnerDb.GetCollection<CloudState>(SyncStateCollectionName).Upsert(LocalCloudStateId, cloudState);
+        }
+
+        IDisposable ILiteSyncDatabase.LockExclusive()
+        {
+            return this.Engine.Locker.Exclusive();
+        }
+
+        Patch ILiteSyncDatabase.GetLocalChanges(CancellationToken ct)
+        {
+            var patch = new Patch();
+
+            foreach (var collectionName in this.syncConfig.SyncedCollections)
+            {
+                var collection = this.InnerDb.GetCollection(collectionName);
+                var dirtyEntities = collection.FindDirtyEntities();
+
+                patch.AddUpsertChanges(collectionName, dirtyEntities);
+
+                var delCollection = this.GetDeletedEntitiesCollection();
+                var deletedEntities = delCollection.FindAll();
+
+                patch.AddDeleteChanges(deletedEntities);
+
+                ct.ThrowIfCancellationRequested();
+            }
+
+            return patch;
+        }
+
+        void ILiteSyncDatabase.ApplyChanges(Patch patch, CancellationToken ct)
+        {
+            var groupped = patch.Changes.GroupBy(x => x.EntityId.CollectionName, x => x);
+
+            foreach (var group in groupped)
+            {
+                var collection = this.InnerDb.GetCollection(group.Key);
+
+                foreach (var change in group)
+                {
+                    change.Apply(collection);
+
+                    ct.ThrowIfCancellationRequested();
+                }
+            }
         }
     }
 }

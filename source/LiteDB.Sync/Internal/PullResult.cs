@@ -14,10 +14,12 @@ namespace LiteDB.Sync.Internal
         public PullResult(CloudState cloudState)
         {
             this.CloudState = cloudState;
+            this.RemotePatch = new Patch();
         }
 
         public PullResult()
         {
+            this.RemotePatch = new Patch();
         }
 
         public Patch RemotePatch { get; }

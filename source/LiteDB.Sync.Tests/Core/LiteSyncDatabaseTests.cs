@@ -26,7 +26,9 @@ namespace LiteDB.Sync.Tests.Core
         {
             this.DbStream = new MemoryStream();
             this.FactoryMock = new Mock<IFactory>();
+
             this.SyncConfigMock = new Mock<ILiteSyncConfiguration>();
+            this.SyncConfigMock.SetupGet(x => x.IsValid).Returns(true);
 
             this.SyncDatabase = new LiteSyncDatabase(
                 this.SyncConfigMock.Object,
@@ -39,6 +41,32 @@ namespace LiteDB.Sync.Tests.Core
         {
             this.SyncDatabase.Dispose();
             this.DbStream.Dispose();
+        }
+
+        [TestFixture]
+        public class WhenCreating
+        {
+            [Test]
+            public void ShouldThrowIsSyncConfigNull()
+            {
+                using (var ms = new MemoryStream())
+                {
+                    Assert.Throws<ArgumentNullException>(() => new LiteSyncDatabase(null, ms));
+                }
+            }
+
+            [Test]
+            public void ShouldThrowIsSyncConfigInvalid()
+            {
+                using (var ms = new MemoryStream())
+                {
+                    var configMock = new Mock<ILiteSyncConfiguration>();
+
+                    configMock.SetupGet(x => x.IsValid).Returns(false);
+
+                    Assert.Throws<ArgumentException>(() => new LiteSyncDatabase(configMock.Object, ms));
+                }
+            }
         }
 
         public class WhenGettingCollectionByType : LiteSyncDatabaseTests
@@ -255,15 +283,15 @@ namespace LiteDB.Sync.Tests.Core
 
         public class WhenSynchronizing : LiteSyncDatabaseTests
         {
-            private Mock<ILiteSynchronizer> synchronizerMock;
+            private Mock<ISynchronizer> synchronizerMock;
 
             public override void Setup()
             {
                 base.Setup();
 
-                this.synchronizerMock = new Mock<ILiteSynchronizer>();
+                this.synchronizerMock = new Mock<ISynchronizer>();
 
-                this.FactoryMock.Setup(x => x.CreateSynchronizer(It.IsAny<ILiteDatabase>(),
+                this.FactoryMock.Setup(x => x.CreateSynchronizer(It.IsAny<ILiteSyncDatabase>(),
                                                                  It.IsAny<ILiteSyncConfiguration>(),
                                                                  It.IsAny<ICloudClient>()))
                                 .Returns(this.synchronizerMock.Object);
@@ -292,10 +320,11 @@ namespace LiteDB.Sync.Tests.Core
                 var firstSyncExecTask = this.SyncDatabase.SynchronizeAsync();
                 var secondSyncExecTask = this.SyncDatabase.SynchronizeAsync();
 
-                Assert.AreEqual(firstSyncExecTask, secondSyncExecTask);
+                Assert.IsNotNull(secondSyncExecTask);
 
                 evt.Set();
 
+                secondSyncExecTask.Wait();
                 firstSyncExecTask.Wait();
 
                 this.synchronizerMock.Verify(x => x.SynchronizeAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -384,6 +413,8 @@ namespace LiteDB.Sync.Tests.Core
                 Assert.IsFalse(this.SyncDatabase.IsSyncInProgress);
             }
         }
+
+        // TBA: Add tests for ILiteSyncDatabase explicit methods
 
         protected void CreateDeletedEntitiesCollection()
         {

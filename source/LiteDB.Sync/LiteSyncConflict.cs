@@ -5,7 +5,7 @@ namespace LiteDB.Sync
 {
     public class LiteSyncConflict
     {
-        public LiteSyncConflict(EntityChangeBase localChange, EntityChangeBase remoteChange)
+        internal LiteSyncConflict(EntityChangeBase localChange, EntityChangeBase remoteChange)
         {
             if (localChange?.EntityId != remoteChange?.EntityId)
             {
@@ -39,6 +39,8 @@ namespace LiteDB.Sync
 
         public void ResolveMerged(BsonDocument mergedEntity)
         {
+            // Should verify the ID !!!
+
             this.Resolution = ConflictResolution.Merge;
             this.MergedEntity = mergedEntity;
         }
@@ -60,6 +62,8 @@ namespace LiteDB.Sync
 
             return localUpsert.Entity.CompareTo(remoteUpsert.Entity) != 0;
         }
+
+        // TODO: Add mapping from bson to entity
 
         internal enum ConflictResolution
         {

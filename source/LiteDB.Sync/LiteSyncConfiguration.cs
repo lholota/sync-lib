@@ -18,6 +18,8 @@
 
         public string[] SyncedCollections { get; }
 
-        // Calls before upload and after apply?
+        public bool IsValid => this.CloudProvider != null
+                               && this.ConflictResolver != null
+                               && this.SyncedCollections != null;
     }
 }
