@@ -85,6 +85,8 @@ namespace LiteDB.Sync
             this.InnerDb = db;
 
             this.factory = factory;
+
+            this.Mapper.RegisterCustomMappings();
         }
 
         public event EventHandler SyncStarted;
@@ -348,7 +350,7 @@ namespace LiteDB.Sync
             foreach (var collectionName in this.syncConfig.SyncedCollections)
             {
                 var collection = this.InnerDb.GetCollection(collectionName);
-                var dirtyEntities = collection.FindDirtyEntities();
+                var dirtyEntities = this.FindDirtyEntities(collection);
 
                 patch.AddUpsertChanges(collectionName, dirtyEntities);
 
@@ -378,6 +380,14 @@ namespace LiteDB.Sync
                     ct.ThrowIfCancellationRequested();
                 }
             }
+        }
+
+        private IEnumerable<BsonDocument> FindDirtyEntities(ILiteCollection<BsonDocument> collection)
+        {
+            var fieldName = this.Mapper.ResolveFieldName.Invoke(nameof(ILiteSyncEntity.RequiresSync));
+            var query = Query.EQ(nameof(ILiteSyncEntity.RequiresSync), new BsonValue(true));
+
+            return collection.Find(query);
         }
     }
 }

@@ -177,8 +177,7 @@ namespace LiteDB.Sync.Tests.Core.LiteSyncCollection
 
         protected void VerifyDeletedEntityExists(BsonValue id)
         {
-            var deletedEntity = this.Db.GetDeletedEntitiesCollection()
-                .FindOne(x => x.EntityId.Id.Equals(id) && x.EntityId.CollectionName == CollectionName);
+            var deletedEntity = this.Db.GetDeletedEntitiesCollection().FindById(this.Db.Mapper, new EntityId(CollectionName, id));
 
             Assert.IsNotNull(deletedEntity, "The DeletedEntity for id {0} was not found", id);
         }

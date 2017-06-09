@@ -414,6 +414,78 @@ namespace LiteDB.Sync.Tests.Core
             }
         }
 
+        public class WhenGettingAndSavingLocalState : LiteSyncDatabaseTests
+        {
+            [Test]
+            public void ShouldSaveLoad()
+            {
+                var syncDc = (ILiteSyncDatabase)this.SyncDatabase;
+                Assert.IsNull(syncDc.GetLocalCloudState());
+
+                var state = new CloudState("PatchId");
+                syncDc.SaveLocalCloudState(state);
+
+                var loadedState = syncDc.GetLocalCloudState();
+
+                Assert.IsNotNull(loadedState);
+                Assert.AreEqual(state.NextPatchId, loadedState.NextPatchId);
+            }
+        }
+
+        public class WhenGettingLocalChanges : LiteSyncDatabaseTests
+        {
+            [Test]
+            public void ShouldNotReturnEntitiesInNonSyncedCollections()
+            {
+                this.SyncConfigMock.Setup(x => x.SyncedCollections).Returns(new string[0]);
+
+                this.SyncDatabase.GetCollection<TestEntity>("Dummy").Insert(new TestEntity(1));
+
+                var patch = ((ILiteSyncDatabase)this.SyncDatabase).GetLocalChanges(CancellationToken.None);
+
+                Assert.IsNotNull(patch);
+                Assert.IsFalse(patch.HasChanges);
+            }
+
+            [Test]
+            public void ShouldReturnEntitiesRequiringSync()
+            {
+                this.SyncConfigMock.Setup(x => x.SyncedCollections).Returns(new[] { nameof(TestEntity) });
+
+                this.SyncDatabase.GetCollection<TestEntity>().Insert(new TestEntity(1));
+
+                var patch = ((ILiteSyncDatabase)this.SyncDatabase).GetLocalChanges(CancellationToken.None);
+
+                Assert.IsNotNull(patch);
+                Assert.IsTrue(patch.HasChanges);
+                Assert.AreEqual(1, patch.Changes.Count());
+                Assert.IsInstanceOf<UpsertEntityChange>(patch.Changes.Single());
+            }
+
+            [Test]
+            public void ShouldReturnDeletedEntities()
+            {
+                this.SyncConfigMock.Setup(x => x.SyncedCollections).Returns(new[] { nameof(TestEntity) });
+
+                var collection = this.SyncDatabase.GetCollection<TestEntity>();
+                collection.Insert(new TestEntity(1));
+                collection.Delete(1);
+
+                var patch = ((ILiteSyncDatabase)this.SyncDatabase).GetLocalChanges(CancellationToken.None);
+
+                Assert.IsNotNull(patch);
+                Assert.IsTrue(patch.HasChanges);
+                Assert.AreEqual(1, patch.Changes.Count());
+                Assert.IsInstanceOf<DeleteEntityChange>(patch.Changes.Single());
+            }
+
+
+
+            /*
+             * Should return deleted entities
+             */
+        }
+
         // TBA: Add tests for ILiteSyncDatabase explicit methods
 
         protected void CreateDeletedEntitiesCollection()

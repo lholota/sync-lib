@@ -15,6 +15,11 @@ namespace LiteDB.Sync.Internal
             return JsonSerialization.SerializeToString(new EntityId(collectionName, id));
         }
 
+        // For BsonMapper
+        //public EntityId()
+        //{
+        //}
+
         public EntityId(string collectionName, BsonValue id)
         {
             this.Validate(collectionName, id);
