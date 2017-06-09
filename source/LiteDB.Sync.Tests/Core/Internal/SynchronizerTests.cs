@@ -140,12 +140,12 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 this.SetupGetLocalChanges(true, 2);
 
                 this.CloudClientMock
-                    .SetupSequence(x => x.Pull(It.IsAny<CloudState>(), It.IsAny<CancellationToken>()))
+                    .SetupSequence(x => x.PullAsync(It.IsAny<CloudState>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new PullResult(new CloudState("Patch1"))) // First call is fine, nothing no changes available
                     .ReturnsAsync(new PullResult(new[] { this.CreatePatch(1, "Hello") }, new CloudState("Patch2")));
 
                 this.CloudClientMock
-                    .SetupSequence(x => x.Push(It.IsAny<CloudState>(), It.IsAny<Patch>(), It.IsAny<CancellationToken>()))
+                    .SetupSequence(x => x.PushAsync(It.IsAny<CloudState>(), It.IsAny<Patch>(), It.IsAny<CancellationToken>()))
                     .Throws(new LiteSyncConflictOccuredException())
                     .ReturnsAsync(new CloudState("Patch3"));
 
@@ -165,14 +165,14 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 this.SetupGetLocalChanges(true, 2);
 
                 this.CloudClientMock
-                    .SetupSequence(x => x.Pull(It.IsAny<CloudState>(), It.IsAny<CancellationToken>()))
+                    .SetupSequence(x => x.PullAsync(It.IsAny<CloudState>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new PullResult(new CloudState("Patch1"))) // First call is fine, nothing new
                     .ReturnsAsync(new PullResult(new[] {this.CreatePatch(1, "Hello2")}, new CloudState("Patch2")))
                     .ReturnsAsync(new PullResult(new[] {this.CreatePatch(1, "Hello3")}, new CloudState("Patch3")))
                     .ReturnsAsync(new PullResult(new[] {this.CreatePatch(1, "Hello4")}, new CloudState("Patch4")));
 
                 this.CloudClientMock
-                    .SetupSequence(x => x.Push(It.IsAny<CloudState>(), It.IsAny<Patch>(), It.IsAny<CancellationToken>()))
+                    .SetupSequence(x => x.PushAsync(It.IsAny<CloudState>(), It.IsAny<Patch>(), It.IsAny<CancellationToken>()))
                     .Throws(new LiteSyncConflictOccuredException())
                     .Throws(new LiteSyncConflictOccuredException())
                     .Throws(new LiteSyncConflictOccuredException())
@@ -348,7 +348,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
             }
 
             this.CloudClientMock
-                .Setup(x => x.Pull(It.IsAny<CloudState>(), It.IsAny<CancellationToken>()))
+                .Setup(x => x.PullAsync(It.IsAny<CloudState>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(result);
         }
 
@@ -361,14 +361,14 @@ namespace LiteDB.Sync.Tests.Core.Internal
             var result = new PullResult(new[] { patch1, patch2 }, cloudState);
 
             this.CloudClientMock
-                .Setup(x => x.Pull(It.IsAny<CloudState>(), It.IsAny<CancellationToken>()))
+                .Setup(x => x.PullAsync(It.IsAny<CloudState>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(result);
         }
 
         protected void SetupPush(string returnedNextPatchId, string expectedTextValue = null, bool assertTextValue = true)
         {
             this.CloudClientMock
-                .Setup(x => x.Push(It.IsAny<CloudState>(), It.IsAny<Patch>(), It.IsAny<CancellationToken>()))
+                .Setup(x => x.PushAsync(It.IsAny<CloudState>(), It.IsAny<Patch>(), It.IsAny<CancellationToken>()))
                 .Callback<CloudState, Patch, CancellationToken>((state, patch, ct) =>
                 {
                     if (assertTextValue)

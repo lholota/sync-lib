@@ -37,7 +37,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("NextPatchId"), It.IsAny<CancellationToken>())).ReturnsAsync((Stream)null);
                 this.providerMock.Setup(x => x.DownloadInitFile(It.IsAny<CancellationToken>())).ReturnsAsync(this.CreateJsonStream(remoteState));
 
-                var pullResult = await this.cloudClient.Pull(null, CancellationToken.None);
+                var pullResult = await this.cloudClient.PullAsync(null, CancellationToken.None);
 
                 this.AssertPullResultHasState(pullResult);
                 Assert.AreEqual("NextPatchId", pullResult.CloudState.NextPatchId);
@@ -55,7 +55,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("Patch1"), It.IsAny<CancellationToken>())).ReturnsAsync(this.CreateJsonStream(remotePatch));
                 this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("Patch2"), It.IsAny<CancellationToken>())).ReturnsAsync((Stream)null);
 
-                var pullResult = await this.cloudClient.Pull(null, CancellationToken.None);
+                var pullResult = await this.cloudClient.PullAsync(null, CancellationToken.None);
 
                 this.AssertPullResultHasState(pullResult);
                 Assert.AreEqual("Patch2", pullResult.CloudState.NextPatchId);
@@ -80,7 +80,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
                     })
                     .Returns(Task.FromResult(0));
 
-                var pullResult = await this.cloudClient.Pull(null, CancellationToken.None);
+                var pullResult = await this.cloudClient.PullAsync(null, CancellationToken.None);
 
                 this.AssertPullResultHasState(pullResult);
 
@@ -99,7 +99,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
                 this.providerMock.Setup(x => x.UploadInitFile(It.IsAny<Stream>())).Throws(new LiteSyncConflictOccuredException());
 
-                var pullResult = await this.cloudClient.Pull(null, CancellationToken.None);
+                var pullResult = await this.cloudClient.PullAsync(null, CancellationToken.None);
 
                 this.AssertPullResultHasState(pullResult);
                 Assert.AreEqual("NextPatchId", pullResult.CloudState.NextPatchId);
@@ -114,7 +114,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
 
                 this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("NextPatchId"), It.IsAny<CancellationToken>())).ReturnsAsync((Stream)null);
 
-                var pullResult = await this.cloudClient.Pull(localState, CancellationToken.None);
+                var pullResult = await this.cloudClient.PullAsync(localState, CancellationToken.None);
 
                 Assert.IsNotNull(pullResult);
                 Assert.IsFalse(pullResult.CloudStateChanged);
@@ -132,7 +132,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("Patch1"), It.IsAny<CancellationToken>())).ReturnsAsync(this.CreateJsonStream(remotePatch));
                 this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("Patch2"), It.IsAny<CancellationToken>())).ReturnsAsync((Stream)null);
 
-                var pullResult = await this.cloudClient.Pull(localState, CancellationToken.None);
+                var pullResult = await this.cloudClient.PullAsync(localState, CancellationToken.None);
 
                 Assert.IsNotNull(pullResult);
 
@@ -155,7 +155,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("Patch2"), It.IsAny<CancellationToken>())).ReturnsAsync(this.CreateJsonStream(remotePatch2));
                 this.providerMock.Setup(x => x.DownloadPatchFile(It.IsIn("Patch3"), It.IsAny<CancellationToken>())).ReturnsAsync((Stream)null);
 
-                var pullResult = await this.cloudClient.Pull(localState, CancellationToken.None);
+                var pullResult = await this.cloudClient.PullAsync(localState, CancellationToken.None);
 
                 Assert.IsNotNull(pullResult);
 
@@ -225,7 +225,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 var cloudState = new CloudState("Patch1");
                 var patch = this.CreatePatch(null);
 
-                await this.cloudClient.Push(cloudState, patch, CancellationToken.None);
+                await this.cloudClient.PushAsync(cloudState, patch, CancellationToken.None);
 
                 this.IsPatchIdValid(cloudState.NextPatchId);
             }
@@ -240,7 +240,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
                 var cloudState = new CloudState("Patch1");
                 var patch = this.CreatePatch(null);
 
-                var ex = Assert.Throws<AggregateException>(() => this.cloudClient.Push(cloudState, patch, CancellationToken.None).Wait());
+                var ex = Assert.Throws<AggregateException>(() => this.cloudClient.PushAsync(cloudState, patch, CancellationToken.None).Wait());
 
                 ex = ex.Flatten();
                 Assert.IsInstanceOf<LiteSyncConflictOccuredException>(ex.InnerExceptions.Single());

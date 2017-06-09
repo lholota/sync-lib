@@ -520,8 +520,6 @@ namespace LiteDB.Sync.Tests.Core
             }
         }
 
-        // TBA: Add tests for ILiteSyncDatabase explicit methods
-
         protected void CreateDeletedEntitiesCollection()
         {
             this.SyncConfigMock.SetupGet(x => x.SyncedCollections).Returns(new[] { nameof(TestEntity) });

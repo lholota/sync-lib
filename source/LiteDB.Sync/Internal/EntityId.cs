@@ -28,17 +28,22 @@ namespace LiteDB.Sync.Internal
         [JsonIgnore]
         public BsonValue BsonId { get; }
 
-        protected bool Equals(EntityId other)
-        {
-            return string.Equals(this.CollectionName, other.CollectionName, StringComparison.OrdinalIgnoreCase) 
-                && this.BsonId == other.BsonId;
-        }
-
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (ReferenceEquals(null, obj))
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(this, obj))
+            {
+                return true;
+            }
+
+            if (obj.GetType() != this.GetType())
+            {
+                return false;
+            }
 
             return this.Equals((EntityId)obj);
         }
@@ -64,6 +69,12 @@ namespace LiteDB.Sync.Internal
         public override string ToString()
         {
             return JsonSerialization.SerializeToString(this);
+        }
+
+        protected bool Equals(EntityId other)
+        {
+            return string.Equals(this.CollectionName, other.CollectionName, StringComparison.OrdinalIgnoreCase)
+                   && this.BsonId == other.BsonId;
         }
 
         private void Validate(string collectionName, BsonValue id)

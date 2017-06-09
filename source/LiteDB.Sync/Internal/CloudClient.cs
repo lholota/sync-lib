@@ -19,7 +19,7 @@ namespace LiteDB.Sync.Internal
             this.serializer = JsonSerialization.CreateSerializer();
         }
 
-        public async Task<PullResult> Pull(CloudState originalState, CancellationToken ct)
+        public async Task<PullResult> PullAsync(CloudState originalState, CancellationToken ct)
         {
             var localState = originalState ?? await this.GetLocalCloudStateAsync(ct);
 
@@ -42,7 +42,7 @@ namespace LiteDB.Sync.Internal
             return new PullResult();
         }
 
-        public async Task<CloudState> Push(CloudState localCloudState, Patch patch, CancellationToken ct)
+        public async Task<CloudState> PushAsync(CloudState localCloudState, Patch patch, CancellationToken ct)
         {
             var nextPatchId = await this.GeneratePatchIdAsync(ct);
 

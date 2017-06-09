@@ -26,7 +26,7 @@ namespace LiteDB.Sync.Internal
             var cloudState = this.db.GetLocalCloudState();
             ct.ThrowIfCancellationRequested();
 
-            var pull = await this.cloudClient.Pull(cloudState, ct);
+            var pull = await this.cloudClient.PullAsync(cloudState, ct);
 
             using (this.db.LockExclusive())
             {
@@ -73,7 +73,7 @@ namespace LiteDB.Sync.Internal
 
                     try
                     {
-                        cloudStateToSave = await this.cloudClient.Push(cloudState, localChanges, ct);
+                        cloudStateToSave = await this.cloudClient.PushAsync(cloudState, localChanges, ct);
                         pushSuccessful = true;
                     }
                     catch (LiteSyncConflictOccuredException ex)
@@ -83,7 +83,7 @@ namespace LiteDB.Sync.Internal
                             throw new LiteSyncConflictRetryCountExceededException(MaxPushRetryCount, ex);
                         }
 
-                        pull = await this.cloudClient.Pull(cloudState, ct);
+                        pull = await this.cloudClient.PullAsync(cloudState, ct);
                         retryCounter++;
                     }
                 }
