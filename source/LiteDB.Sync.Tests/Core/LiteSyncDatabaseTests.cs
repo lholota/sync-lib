@@ -107,9 +107,19 @@ namespace LiteDB.Sync.Tests.Core
                 Assert.Throws<ArgumentException>(() => this.SyncDatabase.GetCollection<LiteSync_Deleted>());
             }
 
+            [Test]
+            public void ShouldThrowIfTryingToGetCloudState()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.GetCollection<LiteSync_State>());
+            }
+
             // ReSharper disable once ClassNeverInstantiated.Local
             // ReSharper disable once InconsistentNaming
             private class LiteSync_Deleted { }
+
+            // ReSharper disable once ClassNeverInstantiated.Local
+            // ReSharper disable once InconsistentNaming
+            private class LiteSync_State { }
         }
 
         public class WhenGettingCollectionByTypeAndName : LiteSyncDatabaseTests
@@ -151,6 +161,12 @@ namespace LiteDB.Sync.Tests.Core
             {
                 Assert.Throws<ArgumentException>(() => this.SyncDatabase.GetCollection<TestEntity>(LiteSyncDatabase.DeletedEntitiesCollectionName));
             }
+
+            [Test]
+            public void ShouldThrowIfTryingToGetCloudState()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.GetCollection<TestEntity>(LiteSyncDatabase.CloudStateCollectionName));
+            }
         }
 
         public class WhenGettingBsonDocCollection : LiteSyncDatabaseTests
@@ -184,6 +200,12 @@ namespace LiteDB.Sync.Tests.Core
             {
                 Assert.Throws<ArgumentException>(() => this.SyncDatabase.GetCollection(LiteSyncDatabase.DeletedEntitiesCollectionName));
             }
+
+            [Test]
+            public void ShouldThrowIfTryingToGetCloudState()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.GetCollection(LiteSyncDatabase.CloudStateCollectionName));
+            }
         }
 
         public class WhenGettingDeletedEntitiesCollection : LiteSyncDatabaseTests
@@ -207,6 +229,14 @@ namespace LiteDB.Sync.Tests.Core
 
                 Assert.IsFalse(this.SyncDatabase.GetCollectionNames().Contains(LiteSyncDatabase.DeletedEntitiesCollectionName));
             }
+
+            [Test]
+            public void ResultShouldNotContainCloudSTate()
+            {
+                ((ILiteSyncDatabase)this.SyncDatabase).SaveLocalCloudState(new CloudState("DummyId"));
+
+                Assert.IsFalse(this.SyncDatabase.GetCollectionNames().Contains(LiteSyncDatabase.CloudStateCollectionName));
+            }
         }
 
         public class WhenRenamingCollection : LiteSyncDatabaseTests
@@ -221,6 +251,18 @@ namespace LiteDB.Sync.Tests.Core
             public void ShouldThrowOnDeletedEntitiesInNewName()
             {
                 Assert.Throws<ArgumentException>(() => this.SyncDatabase.RenameCollection("Source", LiteSyncDatabase.DeletedEntitiesCollectionName));
+            }
+
+            [Test]
+            public void ShouldThrowOnCloudStateInOldName()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.RenameCollection(LiteSyncDatabase.CloudStateCollectionName, "Some other"));
+            }
+
+            [Test]
+            public void ShouldThrowOnCloudStateInNewName()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.RenameCollection("Source", LiteSyncDatabase.CloudStateCollectionName));
             }
 
             [Test]
@@ -246,6 +288,14 @@ namespace LiteDB.Sync.Tests.Core
             }
 
             [Test]
+            public void ShouldReturnFalseOnCloudState()
+            {
+                ((ILiteSyncDatabase)this.SyncDatabase).SaveLocalCloudState(new CloudState("DummyId"));
+
+                Assert.IsFalse(this.SyncDatabase.CollectionExists(LiteSyncDatabase.CloudStateCollectionName));
+            }
+
+            [Test]
             public void ShouldReturnFalseIfNotExists()
             {
                 Assert.IsFalse(this.SyncDatabase.CollectionExists("NotExisting"));
@@ -266,6 +316,12 @@ namespace LiteDB.Sync.Tests.Core
             public void ShouldThrowOnDeletedEntities()
             {
                 Assert.Throws<ArgumentException>(() => this.SyncDatabase.DropCollection(LiteSyncDatabase.DeletedEntitiesCollectionName));
+            }
+
+            [Test]
+            public void ShouldThrowOnCloudState()
+            {
+                Assert.Throws<ArgumentException>(() => this.SyncDatabase.DropCollection(LiteSyncDatabase.CloudStateCollectionName));
             }
 
             [Test]

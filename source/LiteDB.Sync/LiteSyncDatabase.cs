@@ -14,7 +14,7 @@ namespace LiteDB.Sync
         private const string ProtectedCollectionNameExceptionMessage = "The collection name {0} is used by the LiteDB.Sync and cannot be accessed directly.";
 
         internal const string LocalCloudStateId = "LocalHead";
-        internal const string SyncStateCollectionName = "LiteSync_State";
+        internal const string CloudStateCollectionName = "LiteSync_State";
         internal const string DeletedEntitiesCollectionName = "LiteSync_Deleted";
 
         private Task syncInProgressTask;
@@ -294,7 +294,8 @@ namespace LiteDB.Sync
 
         private bool IsCollectionNameProtected(string name)
         {
-            return string.Equals(name, DeletedEntitiesCollectionName, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(name, DeletedEntitiesCollectionName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, CloudStateCollectionName, StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task ExecuteSynchronizationAsync(ISynchronizer synchronizer, CancellationToken ct)
@@ -330,12 +331,12 @@ namespace LiteDB.Sync
 
         CloudState ILiteSyncDatabase.GetLocalCloudState()
         {
-            return this.InnerDb.GetCollection<CloudState>(SyncStateCollectionName).FindById(LocalCloudStateId);
+            return this.InnerDb.GetCollection<CloudState>(CloudStateCollectionName).FindById(LocalCloudStateId);
         }
 
         void ILiteSyncDatabase.SaveLocalCloudState(CloudState cloudState)
         {
-            this.InnerDb.GetCollection<CloudState>(SyncStateCollectionName).Upsert(LocalCloudStateId, cloudState);
+            this.InnerDb.GetCollection<CloudState>(CloudStateCollectionName).Upsert(LocalCloudStateId, cloudState);
         }
 
         IDisposable ILiteSyncDatabase.LockExclusive()

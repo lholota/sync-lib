@@ -33,7 +33,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
         //        var collMock = new Mock<ILiteCollection<CloudState>>();
         //        var expectedResult = new CloudState();
 
-        //        dbMock.Setup(x => x.GetCollection<CloudState>(LiteSyncDatabase.SyncStateCollectionName)).Returns(collMock.Object);
+        //        dbMock.Setup(x => x.GetCollection<CloudState>(LiteSyncDatabase.CloudStateCollectionName)).Returns(collMock.Object);
         //        collMock.Setup(x => x.FindById(LiteSyncDatabase.LocalCloudStateId)).Returns(expectedResult);
 
         //        var actual = dbMock.Object.GetLocalCloudState();
@@ -54,7 +54,7 @@ namespace LiteDB.Sync.Tests.Core.Internal
         //        var collMock = new Mock<ILiteCollection<CloudState>>();
         //        var state = new CloudState();
 
-        //        dbMock.Setup(x => x.GetCollection<CloudState>(LiteSyncDatabase.SyncStateCollectionName)).Returns(collMock.Object);
+        //        dbMock.Setup(x => x.GetCollection<CloudState>(LiteSyncDatabase.CloudStateCollectionName)).Returns(collMock.Object);
         //        collMock.Setup(x => x.Upsert(LiteSyncDatabase.LocalCloudStateId, state));
 
         //        dbMock.Object.SaveLocalCloudState(state);
