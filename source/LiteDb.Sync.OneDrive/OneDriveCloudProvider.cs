@@ -27,20 +27,7 @@ namespace LiteDb.Sync.OneDrive
         public OneDriveCloudProvider(string clientId)
         {
             this.clientApp = new PublicClientApplication(clientId);
-        }
-
-        // TODO: Wrap exceptions in individual methods
-        public void EnsureClient()
-        {
-            this.graphClient = new GraphServiceClient(
-                "https://graph.microsoft.com/v1.0",
-                new DelegateAuthenticationProvider(
-                    async requestMessage =>
-                    {
-                        var token = await this.GetUserToken();
-                        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("bearer", token);
-                    }));
-        }
+        }      
 
         public async Task<Stream> DownloadInitFile(CancellationToken ct)
         {
@@ -94,6 +81,34 @@ namespace LiteDb.Sync.OneDrive
                       .ItemWithPath(fileName)
                       .Request()
                       .UpdateAsync(driveItem);
+        }
+
+        public async Task ClearAppDirectory()
+        {
+            this.EnsureClient();
+
+            var children = await this.graphClient.Drive.Special.AppRoot.Children.Request().GetAsync();
+
+            foreach (var child in children)
+            {
+                if (!string.IsNullOrEmpty(child.Deleted.State))
+                {
+                    await this.graphClient.Drive.Items[child.Id].Request().DeleteAsync();
+                }
+            }
+        }
+
+        // TODO: Wrap exceptions in individual methods
+        private void EnsureClient()
+        {
+            this.graphClient = new GraphServiceClient(
+                "https://graph.microsoft.com/v1.0",
+                new DelegateAuthenticationProvider(
+                    async requestMessage =>
+                    {
+                        var token = await this.GetUserToken();
+                        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("bearer", token);
+                    }));
         }
 
         private async Task<string> GetUserToken()

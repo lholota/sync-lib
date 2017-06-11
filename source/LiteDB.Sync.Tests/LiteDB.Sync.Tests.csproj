@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Providers\OneDrive\**" />
+    <EmbeddedResource Remove="Providers\OneDrive\**" />
+    <None Remove="Providers\OneDrive\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.TestPlatform.TestHost" Version="15.0.0" />
     <PackageReference Include="Moq" Version="4.7.10" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.2" />
@@ -23,6 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LiteDB.Sync.FileShareProvider\LiteDB.Sync.FileShareProvider.csproj" />
+    <ProjectReference Include="..\LiteDb.Sync.OneDrive\LiteDb.Sync.OneDrive.csproj" />
     <ProjectReference Include="..\LiteDB.Sync\LiteDB.Sync.csproj" />
   </ItemGroup>
 
@@ -33,7 +40,6 @@
   <ItemGroup>
     <Folder Include="Providers\DropBox\" />
     <Folder Include="Providers\GoogleDrv\" />
-    <Folder Include="Providers\OneDrive\" />
   </ItemGroup>
 
   <ItemGroup>
