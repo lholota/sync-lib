@@ -2,7 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net47</TargetFramework>
-	<DebugType>full</DebugType>
+    <DebugType>full</DebugType>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\LiteDB.Sync.FileShareProvider\LiteDB.Sync.FileShareProvider.csproj" />
     <ProjectReference Include="..\LiteDB.Sync\LiteDB.Sync.csproj" />
   </ItemGroup>
 

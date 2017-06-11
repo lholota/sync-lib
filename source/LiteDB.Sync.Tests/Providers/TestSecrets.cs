@@ -4,14 +4,25 @@ using Newtonsoft.Json;
 
 namespace LiteDB.Sync.Tests.Providers
 {
-    internal class TestSecrets
+    public class TestSecrets
     {
         private const string FileName = @"Tests.secrets";
 
         public static TestSecrets LoadFromFile()
         {
-            var filePath = Path.Combine(Environment.CurrentDirectory, FileName);
-            var json = File.ReadAllText(filePath);
+            var secretsPath = Environment.GetEnvironmentVariable("LiteDbSyncSecretsPath");
+
+            if (string.IsNullOrEmpty(secretsPath))
+            {
+                throw new Exception("The secrets env. variable is not set.");
+            }
+
+            if (!File.Exists(secretsPath))
+            {
+                throw new FileNotFoundException($"The secrets file {secretsPath} could not be found.", secretsPath);
+            }
+
+            var json = File.ReadAllText(secretsPath);
 
             return JsonConvert.DeserializeObject<TestSecrets>(json);
         }

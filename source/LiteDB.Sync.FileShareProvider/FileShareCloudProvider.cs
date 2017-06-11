@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using LiteDB.Sync.Exceptions;
 
 namespace LiteDB.Sync.FileShareProvider
 {
@@ -21,12 +22,22 @@ namespace LiteDB.Sync.FileShareProvider
         {
             this.EnsureDirectory();
 
+            if (!File.Exists(this.InitFilePath))
+            {
+                return Task.FromResult((Stream)null);
+            }
+
             return Task.FromResult(this.ReadFile(this.InitFilePath));
         }
 
         public async Task UploadInitFile(Stream contents)
         {
             this.EnsureDirectory();
+
+            if (File.Exists(this.InitFilePath))
+            {
+                throw new LiteSyncConflictOccuredException();
+            }
 
             await this.WriteFileAsync(this.InitFilePath, contents);
         }
@@ -37,6 +48,11 @@ namespace LiteDB.Sync.FileShareProvider
 
             var fileName = this.GetPatchFilePath(id);
 
+            if (!File.Exists(fileName))
+            {
+                return Task.FromResult((Stream)null);
+            }
+
             return Task.FromResult(this.ReadFile(fileName));
         }
 
@@ -44,7 +60,14 @@ namespace LiteDB.Sync.FileShareProvider
         {
             this.EnsureDirectory();
 
-            await this.WriteFileAsync(this.GetPatchFilePath(id), contents);
+            var patchFilePath = this.GetPatchFilePath(id);
+
+            if (File.Exists(patchFilePath))
+            {
+                throw new LiteSyncConflictOccuredException();
+            }
+
+            await this.WriteFileAsync(patchFilePath, contents);
         }
 
         public void Cleanup()
