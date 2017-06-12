@@ -27,10 +27,17 @@ namespace LiteDB.Sync.Tests.Providers
             return JsonConvert.DeserializeObject<TestSecrets>(json);
         }
 
-        public string OneDriveClientId { get; private set; }
+        public TestSecrets(string oneDriveClientId, string oneDriveClientSecret, string dropBoxAppKey, string dropBoxAppSecret)
+        {
+            this.OneDriveClientId = oneDriveClientId;
+            this.DropBoxAppKey = dropBoxAppKey;
+            this.DropBoxAppSecret = dropBoxAppSecret;
+        }
 
-        public string DropBoxAppKey { get; private set; }
+        public string OneDriveClientId { get; }
 
-        public string DropBoxAppSecret { get; private set; }
+        public string DropBoxAppKey { get; }
+
+        public string DropBoxAppSecret { get; }
     }
 }

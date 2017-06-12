@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Linq;
 using System.Net.Http.Headers;
 using System.Threading;
 using LiteDB.Sync.Exceptions;
@@ -13,8 +14,9 @@ namespace LiteDb.Sync.OneDrive
 
     public class OneDriveCloudProvider : ILiteSyncCloudProvider
     {
-        private static readonly string[] Scopes = { "onedrive.appfolder" };
+        private static readonly string[] Scopes = { "Files.ReadWrite.AppFolder" };
 
+        private const string Authority = "https://login.microsoftonline.com/common/v2.0";
         private const string HeadFileName = "Sync.head";
         private const string PatchFileNameFormat = "Changes/{0:N}.patch";
 
@@ -24,10 +26,18 @@ namespace LiteDb.Sync.OneDrive
 
         private readonly PublicClientApplication clientApp;
 
-        public OneDriveCloudProvider(string clientId)
+        public OneDriveCloudProvider(string clientId, string clientSecret)
         {
-            this.clientApp = new PublicClientApplication(clientId);
-        }      
+           
+            //this.clientApp = new ConfidentialClientApplication(clientId, Authority, new ClientCredential(clientSecret), null, null);
+            //}
+            //else
+            //{
+
+            this.clientApp = new PublicClientApplication(clientId, Authority, new TokenCache());
+
+            //}
+        }
 
         public async Task<Stream> DownloadInitFile(CancellationToken ct)
         {
@@ -107,7 +117,9 @@ namespace LiteDb.Sync.OneDrive
                     async requestMessage =>
                     {
                         var token = await this.GetUserToken();
-                        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("bearer", token);
+                        Console.WriteLine(token);
+                        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
                     }));
         }
 
@@ -117,10 +129,21 @@ namespace LiteDb.Sync.OneDrive
             {
                 if (this.userToken == null || this.userTokenExpiration <= DateTimeOffset.UtcNow.AddMinutes(5))
                 {
-                    var authResult = await this.clientApp.AcquireTokenAsync(Scopes);
+                    try
+                    {
+                        var authResult =
+                            await this.clientApp.AcquireTokenSilentAsync(Scopes, this.clientApp.Users.FirstOrDefault());
 
-                    this.userToken = authResult.AccessToken;
-                    this.userTokenExpiration = authResult.ExpiresOn;
+                        this.userToken = authResult.AccessToken;
+                        this.userTokenExpiration = authResult.ExpiresOn;
+                    }
+                    catch (MsalUiRequiredException)
+                    {
+                        var authResult = await this.clientApp.AcquireTokenAsync(Scopes);
+
+                        this.userToken = authResult.AccessToken;
+                        this.userTokenExpiration = authResult.ExpiresOn;
+                    }
                 }
 
                 return this.userToken;

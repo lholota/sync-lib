@@ -10,7 +10,7 @@ namespace LiteDB.Sync.Tests.Providers
 
         protected override OneDriveCloudProvider CreateCloudProvider(TestSecrets secrets)
         {
-            return new OneDriveCloudProvider(secrets.OneDriveClientId);
+            return new OneDriveCloudProvider(secrets.OneDriveClientId, secrets.OneDriveClientSecret);
         }
 
         protected override async Task ClearAppFolder()
